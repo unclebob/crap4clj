@@ -1,0 +1,77 @@
+# crap4clj
+
+**CRAP** (Change Risk Anti-Pattern) metric for Clojure projects.
+
+Combines cyclomatic complexity with test coverage to identify functions that are both complex and under-tested — the riskiest code to change.
+
+## Quick Start
+
+Add to your project's `deps.edn`:
+
+```clojure
+:crap {:extra-deps {io.github.unclebob/crap4clj
+                     {:git/url "https://github.com/unclebob/crap4clj"
+                      :git/sha "<sha>"}}
+       :main-opts ["-m" "crap4clj.core"]}
+```
+
+Generate coverage data, then run:
+
+```bash
+clj -M:cov     # generate Cloverage HTML reports
+clj -M:crap    # analyze all source files
+```
+
+## Output
+
+```
+CRAP Report
+===========
+Function                       Namespace                            CC   Cov%     CRAP
+-------------------------------------------------------------------------------------
+complex-fn                     my.namespace                         12   45.0%    130.2
+simple-fn                      my.namespace                          1  100.0%      1.0
+```
+
+## Filtering
+
+Pass module name fragments as arguments to filter:
+
+```bash
+clj -M:crap combat movement    # only files matching "combat" or "movement"
+```
+
+## CRAP Formula
+
+```
+CRAP(fn) = CC² × (1 - coverage)³ + CC
+```
+
+- **CC** = cyclomatic complexity (decision points + 1)
+- **coverage** = fraction of forms covered by tests (from Cloverage)
+
+| Score | Risk |
+|-------|------|
+| 1-5   | Low — clean code |
+| 5-30  | Moderate — refactor or add tests |
+| 30+   | High — complex and under-tested |
+
+## What It Counts
+
+Decision points that increase cyclomatic complexity:
+- `if`, `if-not`, `if-let`, `if-some`
+- `when`, `when-not`, `when-let`, `when-some`, `when-first`
+- `and`, `or`
+- `loop`, `catch`
+- Each clause in `cond`, `condp`, `case`
+
+## Development
+
+```bash
+clj -M:spec    # run tests
+clj -M:crap    # run on own source
+```
+
+## License
+
+Copyright (c) Robert C. Martin. All rights reserved.
