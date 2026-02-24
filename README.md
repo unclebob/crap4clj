@@ -11,7 +11,7 @@ Add to your project's `deps.edn`:
 ```clojure
 :crap {:extra-deps {io.github.unclebob/crap4clj
                      {:git/url "https://github.com/unclebob/crap4clj"
-                      :git/sha "<sha>"}}
+                      :git/sha "68ecdd86dc644b63b25143012b3994c08953b8d8"}}
        :main-opts ["-m" "crap4clj.core"]}
 ```
 
