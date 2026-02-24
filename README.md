@@ -65,6 +65,20 @@ Decision points that increase cyclomatic complexity:
 - `loop`, `catch`
 - Each clause in `cond`, `condp`, `case`
 
+## Claude Code Skill
+
+crap4clj includes a `SKILL.md` for use as a [Claude Code skill](https://docs.anthropic.com/en/docs/claude-code/skills). Add it to your project's `.claude/settings.json`:
+
+```json
+{
+  "skills": [
+    "https://github.com/unclebob/crap4clj/blob/master/SKILL.md"
+  ]
+}
+```
+
+Then ask Claude Code for a "CRAP report" and it will know how to set up and run the tool.
+
 ## Development
 
 ```bash
