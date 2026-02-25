@@ -16,7 +16,7 @@ Add both a `:cov` alias (Cloverage) and a `:crap` alias to the project's `deps.e
        :main-opts ["-m" "speclj.cloverage" "--" "-p" "src" "-s" "spec"]}
 :crap {:extra-deps {io.github.unclebob/crap4clj
                      {:git/url "https://github.com/unclebob/crap4clj"
-                      :git/sha "68ecdd86dc644b63b25143012b3994c08953b8d8"}}
+                      :git/sha "52dabaaaada337015f8e024b78be00bfbc096e81"}}
        :main-opts ["-m" "crap4clj.core"]}
 ```
 
