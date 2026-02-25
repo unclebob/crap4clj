@@ -51,4 +51,23 @@
           (should-be-a String (:namespace e))
           (should-be-a Number (:complexity e))
           (should (<= 0 (:coverage e) 100))
-          (should (pos? (:crap e))))))))
+          (should (pos? (:crap e)))))))
+
+  (context "delete-coverage-dir"
+    (it "deletes an existing coverage directory"
+      (let [dir (java.io.File. "target/test-coverage-dir/sub")]
+        (.mkdirs dir)
+        (spit (java.io.File. dir "file.html") "data")
+        (delete-coverage-dir "target/test-coverage-dir")
+        (should-not (.exists (java.io.File. "target/test-coverage-dir")))))
+
+    (it "is a no-op when directory does not exist"
+      (delete-coverage-dir "target/nonexistent-coverage-dir")
+      (should-not (.exists (java.io.File. "target/nonexistent-coverage-dir")))))
+
+  (context "run-coverage"
+    (it "returns 0 for a successful command"
+      (should= 0 (run-coverage "true")))
+
+    (it "returns non-zero for a failing command"
+      (should-not= 0 (run-coverage "false")))))

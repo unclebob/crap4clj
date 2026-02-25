@@ -9,26 +9,27 @@ Computes the **CRAP** (Change Risk Anti-Pattern) score for every `defn` and `def
 
 ## Setup
 
-Add crap4clj as a git dependency in the project's `deps.edn`:
+Add both a `:cov` alias (Cloverage) and a `:crap` alias to the project's `deps.edn`:
 
 ```clojure
+:cov  {:extra-deps {cloverage/cloverage {:mvn/version "1.2.4"}}
+       :main-opts ["-m" "speclj.cloverage" "--" "-p" "src" "-s" "spec"]}
 :crap {:extra-deps {io.github.unclebob/crap4clj
                      {:git/url "https://github.com/unclebob/crap4clj"
                       :git/sha "68ecdd86dc644b63b25143012b3994c08953b8d8"}}
        :main-opts ["-m" "crap4clj.core"]}
 ```
 
-## Usage
+The example above uses `speclj.cloverage` as the runner. For `clojure.test` projects, use `cloverage.coverage` instead:
 
-### Generate coverage data first
-
-```bash
-clj -M:cov
+```clojure
+:cov  {:extra-deps {cloverage/cloverage {:mvn/version "1.2.4"}}
+       :main-opts ["-m" "cloverage.coverage" "-p" "src" "-s" "test"]}
 ```
 
-This produces Cloverage HTML reports in `target/coverage/`.
+Adjust the `-p` (source path) and `-s` (test path) flags in `:cov` to match your project layout.
 
-### Run CRAP analysis
+## Usage
 
 ```bash
 # Analyze all source files under src/
@@ -37,6 +38,8 @@ clj -M:crap
 # Filter to specific modules
 clj -M:crap combat movement
 ```
+
+crap4clj automatically deletes stale coverage reports, runs `clj -M:cov`, and then analyzes the results.
 
 ### Output
 
@@ -61,9 +64,10 @@ simple-fn                      my.namespace                          1  100.0%  
 
 ## How It Works
 
-1. Finds all `.clj` and `.cljc` files under `src/`
-2. Extracts `defn`/`defn-` functions with line ranges
-3. Computes cyclomatic complexity (if/when/cond/case/and/or/loop/catch)
-4. Reads Cloverage HTML for per-line form coverage
-5. Applies CRAP formula: `CC² × (1 - cov)³ + CC`
-6. Sorts by CRAP score descending and prints report
+1. Deletes old coverage reports and runs Cloverage (`clj -M:cov`)
+2. Finds all `.clj` and `.cljc` files under `src/`
+3. Extracts `defn`/`defn-` functions with line ranges
+4. Computes cyclomatic complexity (if/when/cond/case/and/or/loop/catch)
+5. Reads Cloverage HTML for per-line form coverage
+6. Applies CRAP formula: `CC² × (1 - cov)³ + CC`
+7. Sorts by CRAP score descending and prints report

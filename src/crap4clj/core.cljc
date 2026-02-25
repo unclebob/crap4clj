@@ -5,6 +5,17 @@
             [crap4clj.coverage :as coverage]
             [crap4clj.crap :as crap]))
 
+(defn delete-coverage-dir [dir-path]
+  (let [dir (io/file dir-path)]
+    (when (.exists dir)
+      (run! io/delete-file (reverse (file-seq dir))))))
+
+(defn run-coverage [command]
+  (let [parts (.split command " ")
+        pb (ProcessBuilder. (java.util.Arrays/asList parts))]
+    (.inheritIO pb)
+    (.waitFor (.start pb))))
+
 (defn filter-sources [files module-filters]
   (if (empty? module-filters)
     files
@@ -41,6 +52,11 @@
        sort))
 
 (defn -main [& args]
+  (delete-coverage-dir "target/coverage")
+  (let [exit (run-coverage "clj -M:cov")]
+    (when-not (zero? exit)
+      (println (str "Coverage failed (exit " exit ")"))
+      (System/exit 1)))
   (let [sources (find-source-files)
         filtered (filter-sources sources (vec args))
         all-entries (mapcat analyze-file filtered)

@@ -9,17 +9,27 @@ Combines cyclomatic complexity with test coverage to identify functions that are
 Add to your project's `deps.edn`:
 
 ```clojure
+:cov  {:extra-deps {cloverage/cloverage {:mvn/version "1.2.4"}}
+       :main-opts ["-m" "speclj.cloverage" "--" "-p" "src" "-s" "spec"]}
 :crap {:extra-deps {io.github.unclebob/crap4clj
                      {:git/url "https://github.com/unclebob/crap4clj"
                       :git/sha "68ecdd86dc644b63b25143012b3994c08953b8d8"}}
        :main-opts ["-m" "crap4clj.core"]}
 ```
 
-Generate coverage data, then run:
+Run:
 
 ```bash
-clj -M:cov     # generate Cloverage HTML reports
-clj -M:crap    # analyze all source files
+clj -M:crap    # deletes old coverage, runs Cloverage, analyzes
+```
+
+crap4clj automatically deletes stale coverage reports, runs `clj -M:cov`, and then analyzes the results. Your project must have a `:cov` alias configured with Cloverage.
+
+The example above uses `speclj.cloverage` as the runner. For `clojure.test` projects, use `cloverage.coverage` instead:
+
+```clojure
+:cov  {:extra-deps {cloverage/cloverage {:mvn/version "1.2.4"}}
+       :main-opts ["-m" "cloverage.coverage" "-p" "src" "-s" "test"]}
 ```
 
 ## Output
