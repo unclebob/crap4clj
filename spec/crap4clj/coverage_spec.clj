@@ -32,8 +32,8 @@
         (should-be-a Double (coverage-for-range line-cov 3 5))
         (should= 50.0 (coverage-for-range line-cov 3 5))))
 
-    (it "returns 100.0 when no instrumented lines in range"
-      (should= 100.0 (coverage-for-range {} 1 5))))
+    (it "returns 0.0 when no instrumented lines in range"
+      (should= 0.0 (coverage-for-range {} 1 5))))
 
   (context "source-to-coverage-path"
     (it "maps source path to coverage HTML path"

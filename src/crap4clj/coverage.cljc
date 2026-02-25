@@ -21,7 +21,7 @@
         total-covered (reduce + 0 (map :covered entries))
         total-forms (reduce + 0 (map :total entries))]
     (if (zero? total-forms)
-      100.0
+      0.0
       (* 100.0 (/ (double total-covered) (double total-forms))))))
 
 (defn source-to-coverage-path [source-path]
