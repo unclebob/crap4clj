@@ -12,7 +12,7 @@
 
 (defn- strip-comments [text]
   (->> (str/split-lines text)
-       (remove #(re-matches #"\s*;.*" %))
+       (map #(str/replace % #";.*" ""))
        (str/join "\n")))
 
 (defn- open-bracket? [ch]

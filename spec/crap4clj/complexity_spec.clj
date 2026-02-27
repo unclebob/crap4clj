@@ -158,6 +158,14 @@
       (should= 1 (cyclomatic-complexity
         "(defn foo [x]\n  ;; if when cond\n  x)")))
 
+    (it "ignores inline comments"
+      (should= 4 (cyclomatic-complexity
+        "(defn foo [x]\n  (cond\n    (nil? x) :a\n    (pos? x) :b ; some comment words here\n    :else :c))")))
+
+    (it "ignores inline comments with decision words"
+      (should= 2 (cyclomatic-complexity
+        "(defn foo [x]\n  (if x :yes :no) ; and or when cond)")))
+
     (it "ignores decision words in strings"
       (should= 1 (cyclomatic-complexity
         "(defn foo [x]\n  \"if when cond and or\"\n  x)")))
