@@ -5,7 +5,7 @@
   #"\((if-not|if-let|if-some|when-not|when-let|when-some|when-first|if|when|and|or|loop|catch)[\s\)]")
 
 (def ^:private cond-form-pattern
-  #"\((cond|condp|case)[\s\)]")
+  #"\((cond->>|cond->|cond|condp|case)[\s\)]")
 
 (defn- strip-strings [text]
   (str/replace text #"\"(?:[^\"\\]|\\.)*\"" "\"\""))
@@ -62,7 +62,7 @@
 (defn- count-clauses [text form-type match-start]
   (let [body-start (skip-to-body text match-start)
         total-forms (count-top-level-forms text body-start)
-        skip (case form-type "condp" 2 "case" 1 0)
+        skip (case form-type "condp" 2 "case" 1 "cond->" 1 "cond->>" 1 0)
         remaining (- total-forms skip)
         has-default? (and (= form-type "case") (odd? remaining))]
     (if has-default?

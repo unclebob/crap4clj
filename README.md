@@ -73,7 +73,7 @@ Decision points that increase cyclomatic complexity:
 - `when`, `when-not`, `when-let`, `when-some`, `when-first`
 - `and`, `or`
 - `loop`, `catch`
-- Each clause in `cond`, `condp`, `case`
+- Each clause in `cond`, `condp`, `case`, `cond->`, `cond->>`
 
 ## Claude Code Skill
 

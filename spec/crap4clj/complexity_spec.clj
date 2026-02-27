@@ -113,6 +113,24 @@
              "\n"
              "      :else nil))")))))
 
+  (context "cond-> forms"
+    (it "counts each cond-> clause as a decision point"
+      (should= 3 (cyclomatic-complexity
+        "(defn foo [x]\n  (cond-> x\n    (pos? x) inc\n    (even? x) (* 2)))")))
+
+    (it "counts cond-> with single clause"
+      (should= 2 (cyclomatic-complexity
+        "(defn foo [x]\n  (cond-> x\n    true inc))")))
+
+    (it "counts nested cond-> clauses"
+      (should= 5 (cyclomatic-complexity
+        "(defn foo [x]\n  (cond-> x\n    (pos? x) inc\n    (even? x) dec\n    (odd? x) (* 2)\n    (neg? x) abs))"))))
+
+  (context "cond->> forms"
+    (it "counts each cond->> clause as a decision point"
+      (should= 3 (cyclomatic-complexity
+        "(defn foo [x]\n  (cond->> x\n    (pos? x) (map inc)\n    (even? x) (filter odd?)))"))))
+
   (context "combined decision points"
     (it "counts multiple decision points"
       (should= 5 (cyclomatic-complexity
