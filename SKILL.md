@@ -67,7 +67,7 @@ simple-fn                      my.namespace                          1  100.0%  
 1. Deletes old coverage reports and runs Cloverage (`clj -M:cov`)
 2. Finds all `.clj` and `.cljc` files under `src/`
 3. Extracts `defn`/`defn-` functions with line ranges
-4. Computes cyclomatic complexity (if/when/cond/condp/case/cond->/cond->>/and/or/loop/catch)
+4. Computes cyclomatic complexity (if/when/cond/condp/case/cond->/cond->>/some->/some->>/and/or/loop/catch)
 5. Reads Cloverage HTML for per-line form coverage
 6. Applies CRAP formula: `CC² × (1 - cov)³ + CC`
 7. Sorts by CRAP score descending and prints report

@@ -131,6 +131,24 @@
       (should= 3 (cyclomatic-complexity
         "(defn foo [x]\n  (cond->> x\n    (pos? x) (map inc)\n    (even? x) (filter odd?)))"))))
 
+  (context "some-> forms"
+    (it "counts each some-> step as a decision point"
+      (should= 3 (cyclomatic-complexity
+        "(defn foo [x]\n  (some-> x inc dec))")))
+
+    (it "counts some-> with single step"
+      (should= 2 (cyclomatic-complexity
+        "(defn foo [x]\n  (some-> x inc))")))
+
+    (it "counts some-> with form expressions"
+      (should= 4 (cyclomatic-complexity
+        "(defn foo [x]\n  (some-> x :name str clojure.string/upper-case))"))))
+
+  (context "some->> forms"
+    (it "counts each some->> step as a decision point"
+      (should= 3 (cyclomatic-complexity
+        "(defn foo [x]\n  (some->> x (map inc) (filter pos?)))"))))
+
   (context "combined decision points"
     (it "counts multiple decision points"
       (should= 5 (cyclomatic-complexity

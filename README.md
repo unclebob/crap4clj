@@ -74,6 +74,7 @@ Decision points that increase cyclomatic complexity:
 - `and`, `or`
 - `loop`, `catch`
 - Each clause in `cond`, `condp`, `case`, `cond->`, `cond->>`
+- Each step in `some->`, `some->>`
 
 ## Claude Code Skill
 
