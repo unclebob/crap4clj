@@ -13,7 +13,7 @@ Add to your project's `deps.edn`:
        :main-opts ["-m" "speclj.cloverage" "--" "-p" "src" "-s" "spec"]}
 :crap {:extra-deps {io.github.unclebob/crap4clj
                      {:git/url "https://github.com/unclebob/crap4clj"
-                      :git/sha "5656b5cd2e846e3104877152c8807988b4ae78f8"}}
+                      :git/sha "<current-sha>"}}
        :main-opts ["-m" "crap4clj.core"]}
 ```
 
