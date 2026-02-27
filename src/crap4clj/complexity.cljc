@@ -15,6 +15,12 @@
        (remove #(re-matches #"\s*;.*" %))
        (str/join "\n")))
 
+(defn- open-bracket? [ch]
+  (or (= ch \() (= ch \{) (= ch \[)))
+
+(defn- close-bracket? [ch]
+  (or (= ch \)) (= ch \}) (= ch \])))
+
 (defn- count-top-level-forms
   "Counts top-level forms in text starting at idx (inside an open paren).
    Returns the count of forms at depth 1 before the matching close paren."
@@ -24,12 +30,12 @@
       forms
       (let [ch (nth text i)]
         (cond
-          (= ch \()
+          (open-bracket? ch)
           (recur (inc i) (inc depth)
                  (if (and (= depth 1) (not in-form)) (inc forms) forms)
                  true)
 
-          (= ch \))
+          (close-bracket? ch)
           (recur (inc i) (dec depth) forms
                  (if (= depth 1) false in-form))
 

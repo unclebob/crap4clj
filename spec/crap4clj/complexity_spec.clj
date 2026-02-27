@@ -82,6 +82,37 @@
       (should= 3 (cyclomatic-complexity
         "(defn foo [x]\n  (case x\n    1 :one\n    :other))"))))
 
+  (context "map and vector literals in cond branches"
+    (it "does not count map literal contents as separate forms"
+      (should= 3 (cyclomatic-complexity
+        "(defn foo [x]\n  (cond\n    (= x 1) {:type :army :mode :awake}\n    :else nil))")))
+
+    (it "does not count vector literal contents as separate forms"
+      (should= 3 (cyclomatic-complexity
+        "(defn foo [x]\n  (cond\n    (= x 1) [:a :b :c]\n    :else nil))")))
+
+    (it "handles nested maps in cond branches"
+      (should= 3 (cyclomatic-complexity
+        "(defn foo [x]\n  (cond\n    (= x 1) {:a {:b 1}}\n    :else nil))")))
+
+    (it "handles mixed parens, maps, and vectors"
+      (should= 6 (cyclomatic-complexity
+        (str "(defn foo [cell]\n"
+             "  (let [contents (:contents cell)]\n"
+             "    (cond\n"
+             "      (pred-a? contents)\n"
+             "      {:type :army :mode :awake :owner (:owner contents) :aboard true}\n"
+             "\n"
+             "      (pred-b? contents)\n"
+             "      {:type :fighter :mode :awake :owner (:owner contents) :fuel 20 :from-carrier true}\n"
+             "\n"
+             "      (pred-c? contents) contents\n"
+             "\n"
+             "      (pred-d? cell)\n"
+             "      {:type :fighter :mode :awake :owner :player :fuel 20 :from-airport true}\n"
+             "\n"
+             "      :else nil))")))))
+
   (context "combined decision points"
     (it "counts multiple decision points"
       (should= 5 (cyclomatic-complexity
