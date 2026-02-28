@@ -202,4 +202,42 @@
       (let [source "(defn simple [x] x)\n\n(defn branchy [x]\n  (if x\n    (when x 1)\n    0))"
             fns (extract-functions source)]
         (should= 1 (:complexity (first fns)))
-        (should= 3 (:complexity (second fns)))))))
+        (should= 3 (:complexity (second fns)))))
+
+    (it "does not attribute top-level def complexity to the preceding function"
+      (let [source (str "(defn alpha [x]\n"
+                        "  (if x 1 0))\n\n"
+                        "(def rules\n"
+                        "  [{:id :one\n"
+                        "    :pred (fn [v]\n"
+                        "            (if v\n"
+                        "              (when (pos? v) true)\n"
+                        "              false))}])\n\n"
+                        "(defn omega [y]\n"
+                        "  y)")
+            fns (extract-functions source)
+            by-name (into {} (map (juxt :name identity) fns))]
+        (should= 2 (count fns))
+        (should= 2 (:complexity (get by-name "alpha")))
+        (should= 1 (:complexity (get by-name "omega")))))
+
+    (it "keeps function complexity stable when top-level def forms move"
+      (let [data-form (str "(def rules\n"
+                           "  [{:id :one\n"
+                           "    :pred (fn [v]\n"
+                           "            (if v\n"
+                           "              (when (pos? v) true)\n"
+                           "              false))}])\n\n")
+            funcs (str "(defn alpha [x]\n"
+                       "  (if x 1 0))\n\n"
+                       "(defn omega [y]\n"
+                       "  y)")
+            with-middle (extract-functions (str "(defn alpha [x]\n"
+                                                "  (if x 1 0))\n\n"
+                                                data-form
+                                                "(defn omega [y]\n"
+                                                "  y)"))
+            with-leading (extract-functions (str data-form funcs))
+            score-map (fn [fns] (into {} (map (juxt :name :complexity) fns)))]
+        (should= {"alpha" 2 "omega" 1} (score-map with-middle))
+        (should= {"alpha" 2 "omega" 1} (score-map with-leading))))))

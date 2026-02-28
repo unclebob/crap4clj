@@ -87,40 +87,108 @@
         cond-decisions (count-cond-decisions clean)]
     (+ 1 simple cond-decisions)))
 
-(def ^:private defn-pattern #"^\(defn-?\s+(\S+)")
+(def ^:private defn-pattern #"(?s)^\(\s*defn-?\s+([^\s\(\)\[\]\{\}\"]+)")
 
-(defn- find-defn-starts [lines]
-  (keep-indexed
-    (fn [idx line]
-      (when-let [m (re-find defn-pattern line)]
-        {:name (second m) :start-line (inc idx)}))
-    lines))
+(defn- extract-top-level-defn-forms [source]
+  (let [n (count source)]
+    (loop [i 0
+           line 1
+           depth 0
+           mode :normal
+           escaped false
+           form-start-idx nil
+           form-start-line nil
+           forms []]
+      (if (>= i n)
+        forms
+        (let [ch (nth source i)
+              newline? (= ch \newline)]
+          (cond
+            (= mode :comment)
+            (recur (inc i)
+                   (if newline? (inc line) line)
+                   depth
+                   (if newline? :normal :comment)
+                   false
+                   form-start-idx
+                   form-start-line
+                   forms)
 
-(defn- last-non-blank-before [lines line-idx]
-  (loop [i (dec line-idx)]
-    (cond
-      (neg? i) line-idx
-      (not (str/blank? (nth lines i))) (inc i)
-      :else (recur (dec i)))))
+            (= mode :string)
+            (cond
+              escaped
+              (recur (inc i) (if newline? (inc line) line) depth :string false
+                     form-start-idx form-start-line forms)
 
-(defn- assign-end-lines [starts lines]
-  (let [total (count lines)]
-    (map-indexed
-      (fn [i start]
-        (let [end (if (< i (dec (count starts)))
-                    (last-non-blank-before lines (dec (:start-line (nth starts (inc i)))))
-                    total)]
-          (assoc start :end-line end)))
-      starts)))
+              (= ch \\)
+              (recur (inc i) line depth :string true
+                     form-start-idx form-start-line forms)
 
-(defn- fn-text-from-lines [lines {:keys [start-line end-line]}]
-  (str/join "\n" (subvec lines (dec start-line) end-line)))
+              (= ch \")
+              (recur (inc i) line depth :normal false
+                     form-start-idx form-start-line forms)
+
+              :else
+              (recur (inc i) (if newline? (inc line) line) depth :string false
+                     form-start-idx form-start-line forms))
+
+            :else
+            (cond
+              (= ch \;)
+              (recur (inc i) line depth :comment false
+                     form-start-idx form-start-line forms)
+
+              (= ch \")
+              (recur (inc i) line depth :string false
+                     form-start-idx form-start-line forms)
+
+              (= ch \()
+              (let [at-top-level? (zero? depth)
+                    next-depth (inc depth)]
+                (recur (inc i)
+                       line
+                       next-depth
+                       :normal
+                       false
+                       (if at-top-level? i form-start-idx)
+                       (if at-top-level? line form-start-line)
+                       forms))
+
+              (= ch \))
+              (let [next-depth (max 0 (dec depth))
+                    closes-top-level-form? (and (= depth 1) (some? form-start-idx))
+                    forms' (if-not closes-top-level-form?
+                             forms
+                             (let [form-text (subs source form-start-idx (inc i))]
+                               (if-let [m (re-find defn-pattern form-text)]
+                                 (conj forms {:name (second m)
+                                              :start-line form-start-line
+                                              :end-line line
+                                              :text form-text})
+                                 forms)))]
+                (recur (inc i)
+                       line
+                       next-depth
+                       :normal
+                       false
+                       (if closes-top-level-form? nil form-start-idx)
+                       (if closes-top-level-form? nil form-start-line)
+                       forms'))
+
+              :else
+              (recur (inc i)
+                     (if newline? (inc line) line)
+                     depth
+                     :normal
+                     false
+                     form-start-idx
+                     form-start-line
+                     forms))))))))
 
 (defn extract-functions [source]
-  (let [lines (vec (str/split-lines source))
-        starts (find-defn-starts lines)
-        with-ends (assign-end-lines starts lines)]
-    (mapv (fn [finfo]
-            (let [text (fn-text-from-lines lines finfo)]
-              (assoc finfo :complexity (cyclomatic-complexity text))))
-          with-ends)))
+  (->> (extract-top-level-defn-forms source)
+       (mapv (fn [{:keys [name start-line end-line text]}]
+               {:name name
+                :start-line start-line
+                :end-line end-line
+                :complexity (cyclomatic-complexity text)}))))
