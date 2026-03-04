@@ -34,9 +34,22 @@
              :crap score}))
         fns))
 
+(defn build-entries-by-name [fns detailed-line-cov line-cov ns-name]
+  (mapv (fn [f]
+          (let [cov (or (coverage/coverage-for-function-name detailed-line-cov (:name f))
+                        (coverage/coverage-for-range line-cov (:start-line f) (:end-line f)))
+                score (crap/crap-score (:complexity f) cov)]
+            {:name (:name f)
+             :namespace ns-name
+             :complexity (:complexity f)
+             :coverage cov
+             :crap score}))
+        fns))
+
 (defn analyze-file [source-path]
   (let [source (slurp source-path)
         fns (complexity/extract-functions source)
+        source-cov-path (coverage/source-to-coverage-path source-path)
         cov-path (some #(when (.exists (io/file %)) %)
                        (coverage/source-to-coverage-paths source-path source))
         ns-name (or (coverage/extract-declared-namespace source)
@@ -44,7 +57,10 @@
     (if cov-path
       (let [html (slurp cov-path)
             line-cov (coverage/parse-line-coverage html)]
-        (build-entries fns line-cov ns-name))
+        (if (= cov-path source-cov-path)
+          (build-entries fns line-cov ns-name)
+          (let [detailed-line-cov (coverage/parse-detailed-line-coverage html)]
+            (build-entries-by-name fns detailed-line-cov line-cov ns-name))))
       (build-entries fns {} ns-name))))
 
 (defn find-source-files []

@@ -56,14 +56,17 @@
 
   (context "analyze-file namespace coverage fallback"
     (it "uses namespace coverage report when split-file coverage report is missing"
-      (let [source-path "src/test/split_ns_demo.clj"
+      (let [source-path "src/test/split_ns_demo/part_a.clj"
             coverage-path "target/coverage/test/split_ns_demo.clj.html"
             source "(in-ns 'test.split-ns-demo)\n\n(defn split-fn []\n  (if true\n    1\n    0))\n"
-            html (str "<span class=\"covered\" title=\"1 out of 1 forms covered\">3&nbsp;</span><br/>"
-                      "<span class=\"covered\" title=\"1 out of 1 forms covered\">4&nbsp;</span><br/>"
-                      "<span class=\"covered\" title=\"1 out of 1 forms covered\">5&nbsp;</span><br/>"
-                      "<span class=\"not-covered\" title=\"0 out of 1 forms covered\">6&nbsp;</span><br/>")]
-        (.mkdirs (java.io.File. "src/test"))
+            ;; Duplicate line numbers simulate multiple loaded files merged into one namespace page.
+            ;; Name-based fallback should still attribute coverage to split-fn correctly.
+            html (str "<span class=\"covered\" title=\"1 out of 1 forms covered\">3&nbsp;&nbsp;(defn&nbsp;split-fn&nbsp;[]</span><br/>"
+                      "<span class=\"covered\" title=\"1 out of 1 forms covered\">4&nbsp;&nbsp;&nbsp;&nbsp;(if&nbsp;true</span><br/>"
+                      "<span class=\"covered\" title=\"1 out of 1 forms covered\">5&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1</span><br/>"
+                      "<span class=\"not-covered\" title=\"0 out of 1 forms covered\">3&nbsp;&nbsp;(defn&nbsp;other-fn&nbsp;[]</span><br/>"
+                      "<span class=\"not-covered\" title=\"0 out of 1 forms covered\">4&nbsp;&nbsp;&nbsp;&nbsp;0)</span><br/>")]
+        (.mkdirs (java.io.File. "src/test/split_ns_demo"))
         (.mkdirs (java.io.File. "target/coverage/test"))
         (spit source-path source)
         (spit coverage-path html)
@@ -73,10 +76,11 @@
             (should (seq entries))
             (should= "split-fn" (:name entry))
             (should= "test.split-ns-demo" (:namespace entry))
-            (should (> (:coverage entry) 0.0)))
+            (should= 100.0 (:coverage entry)))
           (finally
             (io/delete-file coverage-path true)
-            (io/delete-file source-path true)))))))
+            (io/delete-file source-path true)
+            (io/delete-file "src/test/split_ns_demo" true)))))))
 
   (context "delete-coverage-dir"
     (it "deletes an existing coverage directory"

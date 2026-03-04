@@ -4,6 +4,12 @@
 (def ^:private span-pattern
   #"<span[^>]*title=\"(\d+) out of (\d+) forms covered\"[^>]*>\s*(\d+)&nbsp;")
 
+(def ^:private detailed-span-pattern
+  #"(?s)<span class=\"([^\"]+)\" title=\"(\d+) out of (\d+) forms covered\">\s*(\d+)&nbsp;&nbsp;(.*?)\s*</span><br/>")
+
+(def ^:private defn-line-pattern
+  #"\(defn-?&nbsp;([^\s&\(\)\[\]\{\}\"]+)")
+
 (defn parse-line-coverage [html]
   (let [matches (re-seq span-pattern html)]
     (into {}
@@ -23,6 +29,37 @@
     (if (zero? total-forms)
       0.0
       (* 100.0 (/ (double total-covered) (double total-forms))))))
+
+(defn parse-detailed-line-coverage [html]
+  (->> (re-seq detailed-span-pattern html)
+       (mapv (fn [[_ klass covered total line-str code]]
+               {:class klass
+                :covered (Integer/parseInt covered)
+                :total (Integer/parseInt total)
+                :line (Integer/parseInt line-str)
+                :code code}))))
+
+(defn- coverage-for-entries [entries]
+  (let [tracked (filter #(pos? (:total %)) entries)
+        total-covered (reduce + 0 (map :covered tracked))
+        total-forms (reduce + 0 (map :total tracked))]
+    (if (zero? total-forms)
+      0.0
+      (* 100.0 (/ (double total-covered) (double total-forms))))))
+
+(defn coverage-for-function-name [detailed-line-cov fn-name]
+  (let [defs (keep-indexed (fn [idx entry]
+                             (when-let [m (re-find defn-line-pattern (:code entry))]
+                               {:idx idx :name (second m)}))
+                           detailed-line-cov)
+        start-idx (:idx (first (filter #(= fn-name (:name %)) defs)))]
+    (when start-idx
+      (let [end-idx (or (some (fn [{:keys [idx]}]
+                                (when (> idx start-idx) (dec idx)))
+                              defs)
+                        (dec (count detailed-line-cov)))
+            entries (subvec detailed-line-cov start-idx (inc end-idx))]
+        (coverage-for-entries entries)))))
 
 (defn source-to-coverage-path [source-path]
   (str "target/coverage/" (subs source-path 4) ".html"))
