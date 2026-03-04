@@ -51,6 +51,21 @@ Pass module name fragments as arguments to filter:
 clj -M:crap combat movement    # only files matching "combat" or "movement"
 ```
 
+## Coverage Mapping Notes
+
+By default, crap4clj looks for Cloverage HTML using the source file path.
+
+For split-file namespace patterns (multiple files loaded into one namespace via
+`in-ns` + `load`), crap4clj also falls back to namespace-based coverage pages
+when a per-file page is missing. It checks:
+
+1. per-file path (for example `target/coverage/foo/bar.clj.html`)
+2. namespace `.clj` path (for example `target/coverage/foo/bar.clj.html`)
+3. namespace `.cljc` path (for example `target/coverage/foo/bar.cljc.html`)
+
+This prevents false `0.0%` function coverage in valid split-file namespace
+setups.
+
 ## CRAP Formula
 
 ```

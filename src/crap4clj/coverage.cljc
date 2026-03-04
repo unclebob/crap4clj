@@ -27,6 +27,29 @@
 (defn source-to-coverage-path [source-path]
   (str "target/coverage/" (subs source-path 4) ".html"))
 
+(defn namespace-to-coverage-paths [ns-name]
+  (let [ns-path (-> ns-name
+                    (str/replace "-" "_")
+                    (str/replace "." "/"))]
+    [(str "target/coverage/" ns-path ".clj.html")
+     (str "target/coverage/" ns-path ".cljc.html")]))
+
+(defn extract-declared-namespace [source]
+  (or (some-> (re-find #"\(\s*ns\s+([A-Za-z0-9*+!_?.\-/]+)" source)
+              second)
+      (some-> (re-find #"\(\s*in-ns\s+'([A-Za-z0-9*+!_?.\-/]+)\s*\)" source)
+              second)
+      (some-> (re-find #"\(\s*in-ns\s+\(quote\s+([A-Za-z0-9*+!_?.\-/]+)\)\s*\)" source)
+              second)))
+
+(defn source-to-coverage-paths [source-path source]
+  (let [declared-ns (extract-declared-namespace source)]
+    (->> (concat [(source-to-coverage-path source-path)]
+                 (when declared-ns
+                   (namespace-to-coverage-paths declared-ns)))
+         distinct
+         vec)))
+
 (defn source-to-namespace [source-path]
   (-> source-path
       (subs 4)

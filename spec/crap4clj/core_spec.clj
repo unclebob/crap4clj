@@ -1,5 +1,6 @@
 (ns crap4clj.core-spec
-  (:require [speclj.core :refer :all]
+  (:require [clojure.java.io :as io]
+            [speclj.core :refer :all]
             [crap4clj.core :refer :all]))
 
 (describe "crap4clj core"
@@ -53,6 +54,30 @@
           (should (<= 0 (:coverage e) 100))
           (should (pos? (:crap e)))))))
 
+  (context "analyze-file namespace coverage fallback"
+    (it "uses namespace coverage report when split-file coverage report is missing"
+      (let [source-path "src/test/split_ns_demo.clj"
+            coverage-path "target/coverage/test/split_ns_demo.clj.html"
+            source "(in-ns 'test.split-ns-demo)\n\n(defn split-fn []\n  (if true\n    1\n    0))\n"
+            html (str "<span class=\"covered\" title=\"1 out of 1 forms covered\">3&nbsp;</span><br/>"
+                      "<span class=\"covered\" title=\"1 out of 1 forms covered\">4&nbsp;</span><br/>"
+                      "<span class=\"covered\" title=\"1 out of 1 forms covered\">5&nbsp;</span><br/>"
+                      "<span class=\"not-covered\" title=\"0 out of 1 forms covered\">6&nbsp;</span><br/>")]
+        (.mkdirs (java.io.File. "src/test"))
+        (.mkdirs (java.io.File. "target/coverage/test"))
+        (spit source-path source)
+        (spit coverage-path html)
+        (try
+          (let [entries (analyze-file source-path)
+                entry (first entries)]
+            (should (seq entries))
+            (should= "split-fn" (:name entry))
+            (should= "test.split-ns-demo" (:namespace entry))
+            (should (> (:coverage entry) 0.0)))
+          (finally
+            (io/delete-file coverage-path true)
+            (io/delete-file source-path true)))))))
+
   (context "delete-coverage-dir"
     (it "deletes an existing coverage directory"
       (let [dir (java.io.File. "target/test-coverage-dir/sub")]
@@ -70,4 +95,4 @@
       (should= 0 (run-coverage "true")))
 
     (it "returns non-zero for a failing command"
-      (should-not= 0 (run-coverage "false")))))
+      (should-not= 0 (run-coverage "false"))))

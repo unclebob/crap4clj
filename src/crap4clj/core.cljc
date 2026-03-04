@@ -37,9 +37,11 @@
 (defn analyze-file [source-path]
   (let [source (slurp source-path)
         fns (complexity/extract-functions source)
-        cov-path (coverage/source-to-coverage-path source-path)
-        ns-name (coverage/source-to-namespace source-path)]
-    (if (.exists (io/file cov-path))
+        cov-path (some #(when (.exists (io/file %)) %)
+                       (coverage/source-to-coverage-paths source-path source))
+        ns-name (or (coverage/extract-declared-namespace source)
+                    (coverage/source-to-namespace source-path))]
+    (if cov-path
       (let [html (slurp cov-path)
             line-cov (coverage/parse-line-coverage html)]
         (build-entries fns line-cov ns-name))

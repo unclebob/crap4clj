@@ -44,6 +44,35 @@
       (should= "target/coverage/foo/bar/army.clj.html"
         (source-to-coverage-path "src/foo/bar/army.clj"))))
 
+  (context "namespace-to-coverage-paths"
+    (it "maps namespace to Cloverage-style HTML paths"
+      (should= ["target/coverage/foo/bar_baz.clj.html"
+                "target/coverage/foo/bar_baz.cljc.html"]
+        (namespace-to-coverage-paths "foo.bar-baz"))))
+
+  (context "extract-declared-namespace"
+    (it "extracts namespace from ns form"
+      (should= "foo.bar"
+        (extract-declared-namespace "(ns foo.bar)\\n(defn x [] 1)")))
+
+    (it "extracts namespace from in-ns quote form"
+      (should= "foo.bar"
+        (extract-declared-namespace "(in-ns 'foo.bar)\\n(defn x [] 1)")))
+
+    (it "extracts namespace from in-ns (quote ...) form"
+      (should= "foo.bar"
+        (extract-declared-namespace "(in-ns (quote foo.bar))\\n(defn x [] 1)"))))
+
+  (context "source-to-coverage-paths"
+    (it "adds namespace fallback paths after per-file path"
+      (let [paths (source-to-coverage-paths
+                    "src/empire/architecture/dependency_checker/core_base_config.clj"
+                    "(in-ns 'empire.architecture.dependency-checker)")]
+        (should= ["target/coverage/empire/architecture/dependency_checker/core_base_config.clj.html"
+                  "target/coverage/empire/architecture/dependency_checker.clj.html"
+                  "target/coverage/empire/architecture/dependency_checker.cljc.html"]
+          paths))))
+
   (context "source-to-namespace"
     (it "converts .cljc source path to namespace string"
       (should= "foo.combat"
