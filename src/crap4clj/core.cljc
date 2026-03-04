@@ -36,8 +36,7 @@
 
 (defn build-entries-by-name [fns detailed-line-cov ns-name]
   (mapv (fn [f]
-          (let [cov (or (coverage/coverage-for-function-name detailed-line-cov (:name f))
-                        0.0)
+          (let [cov (coverage/coverage-for-function-name detailed-line-cov (:name f))
                 score (crap/crap-score (:complexity f) cov)]
             {:name (:name f)
              :namespace ns-name
@@ -74,10 +73,10 @@
       (let [html (slurp ns-cov-path)
             detailed-line-cov (coverage/parse-detailed-line-coverage html)
             entries (build-entries-by-name fns detailed-line-cov ns-name)
-            unresolved (count (filter #(zero? (:coverage %)) entries))]
+            unresolved (count (filter #(nil? (:coverage %)) entries))]
         (when (pos? unresolved)
           (binding [*out* *err*]
-            (println (format "Warning: namespace fallback coverage for %s via %s left %d/%d functions unresolved; enable LCOV for file-accurate coverage."
+            (println (format "Warning: namespace fallback coverage for %s via %s left %d/%d functions unresolved; showing N/A (not 0.0%%). Enable LCOV (--lcov) for file-accurate coverage."
                              source-path ns-cov-path unresolved (count entries)))))
         entries)
 
@@ -92,7 +91,13 @@
 
 (defn -main [& args]
   (delete-coverage-dir "target/coverage")
-  (let [exit (run-coverage "clj -M:cov")]
+  (let [exit-with-lcov (run-coverage "clj -M:cov --lcov")
+        exit (if (zero? exit-with-lcov)
+               0
+               (do
+                 (binding [*out* *err*]
+                   (println "Warning: clj -M:cov --lcov failed; retrying without --lcov."))
+                 (run-coverage "clj -M:cov")))]
     (when-not (zero? exit)
       (println (str "Coverage failed (exit " exit ")"))
       (System/exit 1)))

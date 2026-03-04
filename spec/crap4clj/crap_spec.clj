@@ -17,7 +17,10 @@
       (should (< (Math/abs (- 18.648 (crap-score 8 45.0))) 0.01)))
 
     (it "returns 1.0 for trivial fully-covered function"
-      (should= 1.0 (crap-score 1 100.0))))
+      (should= 1.0 (crap-score 1 100.0)))
+
+    (it "returns nil for indeterminate coverage"
+      (should= nil (crap-score 3 nil))))
 
   (context "sort-by-crap"
     (it "sorts entries by crap score descending"
@@ -25,7 +28,14 @@
                      {:name "b" :crap 50.0}
                      {:name "c" :crap 1.0}]
             sorted (sort-by-crap entries)]
-        (should= ["b" "a" "c"] (map :name sorted)))))
+        (should= ["b" "a" "c"] (map :name sorted))))
+
+    (it "sorts indeterminate entries after scored entries"
+      (let [entries [{:name "a" :crap nil}
+                     {:name "b" :crap 5.0}
+                     {:name "c" :crap 1.0}]
+            sorted (sort-by-crap entries)]
+        (should= ["b" "c" "a"] (map :name sorted)))))
 
   (context "format-report"
     (it "produces a text table"
@@ -33,4 +43,9 @@
             report (format-report entries)]
         (should-contain "foo" report)
         (should-contain "test.bar" report)
-        (should-contain "CRAP" report)))))
+        (should-contain "CRAP" report)))
+
+    (it "shows N/A for indeterminate coverage and crap"
+      (let [entries [{:name "foo" :namespace "test.bar" :complexity 3 :coverage nil :crap nil}]
+            report (format-report entries)]
+        (should-contain "N/A" report)))))

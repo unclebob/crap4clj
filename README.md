@@ -23,7 +23,9 @@ Run:
 clj -M:crap    # deletes old coverage, runs Cloverage, analyzes
 ```
 
-crap4clj automatically deletes stale coverage reports, runs `clj -M:cov`, and then analyzes the results. Your project must have a `:cov` alias configured with Cloverage.
+crap4clj automatically deletes stale coverage reports, runs `clj -M:cov --lcov`
+(falling back to `clj -M:cov` if needed), and then analyzes the results. Your
+project must have a `:cov` alias configured with Cloverage.
 
 The example above uses `speclj.cloverage` as the runner. For `clojure.test` projects, use `cloverage.coverage` instead:
 
@@ -65,7 +67,7 @@ it preserves physical source file paths.
 
 If only namespace fallback HTML is available, crap4clj uses `defn` name matching
 and does not reuse mismatched line ranges. Unmatched functions are reported as
-`0.0%` and a warning is printed to stderr.
+`N/A` (indeterminate) and a warning is printed to stderr.
 
 Namespace fallback lookup checks:
 

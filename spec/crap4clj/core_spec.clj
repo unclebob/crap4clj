@@ -98,7 +98,7 @@
             (io/delete-file source-path true))))))
 
   (context "analyze-file namespace fallback without matching defn"
-    (it "does not use line-range overlap when namespace html does not include the function"
+    (it "marks coverage as indeterminate when namespace html does not include the function"
       (let [source-path "src/test/no_match/part_a.clj"
             coverage-path "target/coverage/test/no_match.clj.html"
             source "(in-ns 'test.no-match)\n\n(defn part-fn []\n  1)\n"
@@ -110,7 +110,8 @@
         (try
           (let [entry (first (analyze-file source-path))]
             (should= "part-fn" (:name entry))
-            (should= 0.0 (:coverage entry)))
+            (should= nil (:coverage entry))
+            (should= nil (:crap entry)))
           (finally
             (io/delete-file coverage-path true)
             (io/delete-file source-path true)
