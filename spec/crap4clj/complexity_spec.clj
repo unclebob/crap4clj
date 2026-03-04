@@ -28,7 +28,36 @@
     (it "extracts no functions from comments and strings"
       (let [source (str "; (defn ignored [] 1)\n"
                         "\"(defn ignored2 [] 2)\"\n")]
-        (should= [] (extract-functions source)))))
+        (should= [] (extract-functions source))))
+
+    (it "transitions from comment mode at newline and resumes parsing"
+      (let [source (str "; first comment line\n"
+                        "(defn parsed [] 1)\n")
+            forms (#'crap4clj.complexity/extract-top-level-defn-forms source)]
+        (should= 1 (count forms))
+        (should= "parsed" (:name (first forms)))))
+
+    (it "tracks top-level open and close boundaries for defn form"
+      (let [source "(defn alpha [] 1)\n"
+            forms (#'crap4clj.complexity/extract-top-level-defn-forms source)
+            f (first forms)]
+        (should= 1 (count forms))
+        (should= 1 (:start-line f))
+        (should= 1 (:end-line f))))
+
+    (it "keeps non-top-level closings from resetting current form state"
+      (let [source (str "(defn alpha []\n"
+                        "  (let [x (str \"a\")]\n"
+                        "    x))\n")
+            forms (#'crap4clj.complexity/extract-top-level-defn-forms source)]
+        (should= 1 (count forms))
+        (should= "alpha" (:name (first forms)))))
+
+    (it "handles normal-mode newlines outside forms"
+      (let [source "\n\n(defn alpha [] 1)\n\n"
+            forms (#'crap4clj.complexity/extract-top-level-defn-forms source)]
+        (should= 1 (count forms))
+        (should= "alpha" (:name (first forms))))))
 
   (context "base complexity"
     (it "returns 1 for an empty function"

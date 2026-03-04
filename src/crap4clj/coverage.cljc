@@ -105,9 +105,10 @@
     (:out (finalize-lcov-record state))))
 
 (defn load-lcov [path]
-  (let [f (File. path)]
-    (when (.exists f)
-      (parse-lcov (slurp f)))))
+  (try
+    (parse-lcov (slurp path))
+    (catch java.io.FileNotFoundException _
+      nil)))
 
 (defn- normalize-path [path]
   (let [decoded (URLDecoder/decode path "UTF-8")]

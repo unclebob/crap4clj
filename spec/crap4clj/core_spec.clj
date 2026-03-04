@@ -186,7 +186,16 @@
       (let [out (java.io.StringWriter.)]
         (binding [*out* out]
           (#'crap4clj.core/ensure-coverage-success! 0)
-          (should= "" (str out))))))
+          (should= "" (str out)))))
+
+    (it "prints failure and calls exit hook for non-zero status"
+      (let [out (java.io.StringWriter.)
+            status* (atom nil)]
+        (with-redefs [crap4clj.core/exit! (fn [s] (reset! status* s))]
+          (binding [*out* out]
+            (#'crap4clj.core/ensure-coverage-success! 2)
+            (should (str/includes? (str out) "Coverage failed (exit 2)"))
+            (should= 1 @status*))))))
 
   (context "maybe-debug-lcov-mismatch"
     (it "delegates when lcov exists but source lookup misses"

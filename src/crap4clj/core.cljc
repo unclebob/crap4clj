@@ -141,10 +141,15 @@
           (println "Warning: clj -M:cov --lcov failed; retrying without --lcov."))
         (run-coverage "clj -M:cov")))))
 
+(declare exit!)
+
 (defn- ensure-coverage-success! [exit]
   (when-not (zero? exit)
     (println (str "Coverage failed (exit " exit ")"))
-    (System/exit 1)))
+    (exit! 1)))
+
+(defn- exit! [status]
+  (System/exit status))
 
 (defn- sorted-entries [args lcov-data]
   (let [sources (find-source-files)

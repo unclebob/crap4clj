@@ -42,6 +42,24 @@
 (defn- next-state-token [depth forms in-form]
   [depth (maybe-inc-forms forms depth in-form) true])
 
+(defn- line-after-newline [line newline?]
+  (if newline?
+    (inc line)
+    line))
+
+(defn- mode-after-comment [newline?]
+  (if newline?
+    :normal
+    :comment))
+
+(defn- maybe-top-level-start [at-top-level? candidate current]
+  (if at-top-level?
+    candidate
+    current))
+
+(defn- clear-when [pred value]
+  (if pred nil value))
+
 (defn- done-counting-top-level-forms? [text i depth]
   (or (>= i (count text)) (zero? depth)))
 
@@ -135,9 +153,9 @@
           (cond
             (= mode :comment)
             (recur (inc i)
-                   (if newline? (inc line) line)
+                   (line-after-newline line newline?)
                    depth
-                   (if newline? :normal :comment)
+                   (mode-after-comment newline?)
                    false
                    form-start-idx
                    form-start-line
@@ -146,7 +164,7 @@
             (= mode :string)
             (cond
               escaped
-              (recur (inc i) (if newline? (inc line) line) depth :string false
+              (recur (inc i) (line-after-newline line newline?) depth :string false
                      form-start-idx form-start-line forms)
 
               (= ch \\)
@@ -158,7 +176,7 @@
                      form-start-idx form-start-line forms)
 
               :else
-              (recur (inc i) (if newline? (inc line) line) depth :string false
+              (recur (inc i) (line-after-newline line newline?) depth :string false
                      form-start-idx form-start-line forms))
 
             :else
@@ -179,8 +197,8 @@
                        next-depth
                        :normal
                        false
-                       (if at-top-level? i form-start-idx)
-                       (if at-top-level? line form-start-line)
+                       (maybe-top-level-start at-top-level? i form-start-idx)
+                       (maybe-top-level-start at-top-level? line form-start-line)
                        forms))
 
               (= ch \))
@@ -200,13 +218,13 @@
                        next-depth
                        :normal
                        false
-                       (if closes-top-level-form? nil form-start-idx)
-                       (if closes-top-level-form? nil form-start-line)
+                       (clear-when closes-top-level-form? form-start-idx)
+                       (clear-when closes-top-level-form? form-start-line)
                        forms'))
 
               :else
               (recur (inc i)
-                     (if newline? (inc line) line)
+                     (line-after-newline line newline?)
                      depth
                      :normal
                      false
