@@ -1,5 +1,6 @@
 (ns crap4clj.coverage
   (:import (java.io File))
+  (:import (java.net URLDecoder))
   (:require [clojure.string :as str]))
 
 (def ^:private span-pattern
@@ -111,23 +112,74 @@
       (parse-lcov (slurp f)))))
 
 (defn- normalize-path [path]
-  (-> path
-      (str/replace "\\" "/")
-      (str/replace #"^\./" "")))
+  (let [decoded (URLDecoder/decode path "UTF-8")]
+    (-> decoded
+        (str/replace "\\" "/")
+        (str/replace #"^file:" "")
+        (str/replace #"^\./" "")
+        (str/replace #"/+" "/"))))
+
+(defn- path-segments [path]
+  (->> (str/split (normalize-path path) #"/")
+       (remove str/blank?)
+       vec))
+
+(defn- suffix-segments-match? [path suffix]
+  (let [p (path-segments path)
+        s (path-segments suffix)
+        n (count s)]
+    (and (pos? n)
+         (<= n (count p))
+         (= s (subvec p (- (count p) n) (count p))))))
+
+(defn- source-path-candidates [source-path]
+  (let [relative (normalize-path source-path)
+        absolute (normalize-path (.getAbsolutePath (File. source-path)))
+        canonical (normalize-path (.getCanonicalPath (File. source-path)))
+        relative-no-src (str/replace relative #"^src/" "")
+        absolute-no-src (str/replace absolute #"/src/" "/")
+        canonical-no-src (str/replace canonical #"/src/" "/")]
+    (->> [relative absolute canonical
+          relative-no-src absolute-no-src canonical-no-src]
+         (remove str/blank?)
+         distinct)))
 
 (defn lcov-coverage-for-source [lcov-data source-path]
   (when lcov-data
-    (let [source-file (File. source-path)
-          absolute-path (normalize-path (.getAbsolutePath source-file))
-          relative-path (normalize-path source-path)
-          candidates #{relative-path absolute-path}]
-      (or (some #(get lcov-data %) candidates)
+    (let [candidates (source-path-candidates source-path)
+          by-key (into {} (map (fn [[k v]] [(normalize-path k) v]) lcov-data))]
+      (or (some #(get by-key %) candidates)
           (some (fn [[k v]]
-                  (let [nk (normalize-path k)]
-                    (when (or (str/ends-with? nk (str "/" relative-path))
-                              (= nk relative-path))
-                      v)))
-                lcov-data)))))
+                  (when (some #(suffix-segments-match? k %) candidates)
+                    v))
+                by-key)))))
+
+(defn- common-suffix-length [a b]
+  (loop [xs (reverse (path-segments a))
+         ys (reverse (path-segments b))
+         n 0]
+    (if (and (seq xs) (seq ys) (= (first xs) (first ys)))
+      (recur (rest xs) (rest ys) (inc n))
+      n)))
+
+(defn lcov-diagnostics [lcov-data source-path]
+  (when lcov-data
+    (let [candidates (source-path-candidates source-path)
+          normalized-keys (->> (keys lcov-data)
+                               (map normalize-path)
+                               distinct)
+          scored (for [k normalized-keys]
+                   {:sf k
+                    :score (apply max (map #(common-suffix-length k %) candidates))})
+          closest (->> scored
+                       (filter #(pos? (:score %)))
+                       (sort-by (juxt (comp - :score) :sf))
+                       (take 5)
+                       vec)]
+      {:source-path (normalize-path source-path)
+       :source-candidates candidates
+       :sf-count (count normalized-keys)
+       :closest-sf closest})))
 
 (defn source-to-coverage-path [source-path]
   (str "target/coverage/" (subs source-path 4) ".html"))

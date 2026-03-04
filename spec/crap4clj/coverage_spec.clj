@@ -49,7 +49,35 @@
     (it "finds lcov coverage by source path suffix"
       (let [parsed {"/tmp/work/src/foo/bar.clj" {10 {:covered 1 :total 1}}}]
         (should= {10 {:covered 1 :total 1}}
-          (lcov-coverage-for-source parsed "src/foo/bar.clj")))))
+          (lcov-coverage-for-source parsed "src/foo/bar.clj"))))
+
+    (it "matches when SF path omits src prefix"
+      (let [parsed {"empire/architecture/dependency_checker/core_base.clj"
+                    {12 {:covered 1 :total 1}
+                     13 {:covered 0 :total 1}}}]
+        (should= {12 {:covered 1 :total 1}
+                  13 {:covered 0 :total 1}}
+          (lcov-coverage-for-source
+            parsed
+            "src/empire/architecture/dependency_checker/core_base.clj"))))
+
+    (it "matches file URI style SF paths"
+      (let [parsed {"file:/Users/me/project/src/foo/bar.clj"
+                    {7 {:covered 1 :total 1}}}]
+        (should= {7 {:covered 1 :total 1}}
+          (lcov-coverage-for-source parsed "src/foo/bar.clj"))))
+
+    (it "reports closest SF candidates for diagnostics"
+      (let [parsed {"src/alpha/beta.clj" {}
+                    "/tmp/empire/architecture/dependency_checker/core_base.clj" {}
+                    "/tmp/empire/architecture/dependency_checker/cli.clj" {}}
+            d (lcov-diagnostics parsed "src/empire/architecture/dependency_checker/core_base.clj")]
+        (should= "src/empire/architecture/dependency_checker/core_base.clj"
+          (:source-path d))
+        (should (pos? (:sf-count d)))
+        (should (seq (:closest-sf d)))
+        (should= "/tmp/empire/architecture/dependency_checker/core_base.clj"
+          (:sf (first (:closest-sf d)))))))
 
   (context "coverage-for-range"
     (it "computes coverage percentage for a line range"

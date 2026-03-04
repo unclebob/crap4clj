@@ -45,6 +45,25 @@
              :crap score}))
         fns))
 
+(defn- env-true? [s]
+  (contains? #{"1" "true" "yes" "on"}
+             (str/lower-case (str (or s "")))))
+
+(defn- debug-lcov-mismatch [source-path lcov-data]
+  (when (and lcov-data (env-true? (System/getenv "CRAP4CLJ_DEBUG_LCOV")))
+    (let [{:keys [source-path source-candidates sf-count closest-sf]}
+          (coverage/lcov-diagnostics lcov-data source-path)]
+      (binding [*out* *err*]
+        (println (format "LCOV debug: no SF match for %s (SF entries: %d)" source-path sf-count))
+        (println (str "LCOV debug: source candidates: "
+                      (str/join ", " source-candidates)))
+        (if (seq closest-sf)
+          (do
+            (println "LCOV debug: closest SF candidates:")
+            (doseq [{:keys [sf score]} closest-sf]
+              (println (format "  score=%d sf=%s" score sf))))
+          (println "LCOV debug: no close SF candidates."))))))
+
 (defn analyze-file
   ([source-path]
    (analyze-file source-path nil))
@@ -60,6 +79,8 @@
         lcov-line-cov (coverage/lcov-coverage-for-source lcov-data source-path)
         ns-name (or (coverage/extract-declared-namespace source)
                     (coverage/source-to-namespace source-path))]
+    (when (and lcov-data (nil? lcov-line-cov))
+      (debug-lcov-mismatch source-path lcov-data))
     (cond
       source-cov-exists?
       (let [html (slurp source-cov-path)
