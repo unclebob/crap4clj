@@ -82,6 +82,40 @@
             (io/delete-file source-path true)
             (io/delete-file "src/test/split_ns_demo" true)))))))
 
+  (context "analyze-file lcov fallback"
+    (it "uses lcov line data when per-file html is missing"
+      (let [source-path "src/test/lcov_demo.clj"
+            source "(ns test.lcov-demo)\n\n(defn only-fn []\n  42)\n"
+            lcov-data {"src/test/lcov_demo.clj" {3 {:covered 1 :total 1}
+                                                 4 {:covered 1 :total 1}}}]
+        (.mkdirs (java.io.File. "src/test"))
+        (spit source-path source)
+        (try
+          (let [entry (first (analyze-file source-path lcov-data))]
+            (should= "only-fn" (:name entry))
+            (should= 100.0 (:coverage entry)))
+          (finally
+            (io/delete-file source-path true))))))
+
+  (context "analyze-file namespace fallback without matching defn"
+    (it "does not use line-range overlap when namespace html does not include the function"
+      (let [source-path "src/test/no_match/part_a.clj"
+            coverage-path "target/coverage/test/no_match.clj.html"
+            source "(in-ns 'test.no-match)\n\n(defn part-fn []\n  1)\n"
+            html "<span class=\"covered\" title=\"1 out of 1 forms covered\">1&nbsp;&nbsp;(ns&nbsp;test.no-match)</span><br/>"]
+        (.mkdirs (java.io.File. "src/test/no_match"))
+        (.mkdirs (java.io.File. "target/coverage/test"))
+        (spit source-path source)
+        (spit coverage-path html)
+        (try
+          (let [entry (first (analyze-file source-path))]
+            (should= "part-fn" (:name entry))
+            (should= 0.0 (:coverage entry)))
+          (finally
+            (io/delete-file coverage-path true)
+            (io/delete-file source-path true)
+            (io/delete-file "src/test/no_match" true))))))
+
   (context "delete-coverage-dir"
     (it "deletes an existing coverage directory"
       (let [dir (java.io.File. "target/test-coverage-dir/sub")]

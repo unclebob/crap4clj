@@ -35,6 +35,22 @@
         (should= 0.0 (coverage-for-function-name detailed "bar"))
         (should= nil (coverage-for-function-name detailed "baz")))))
 
+  (context "lcov parsing"
+    (it "parses line coverage from lcov text"
+      (let [lcov (str "SF:src/foo/bar.clj\n"
+                      "DA:10,3\n"
+                      "DA:11,0\n"
+                      "end_of_record\n")
+            parsed (parse-lcov lcov)]
+        (should= {10 {:covered 1 :total 1}
+                  11 {:covered 0 :total 1}}
+          (get parsed "src/foo/bar.clj"))))
+
+    (it "finds lcov coverage by source path suffix"
+      (let [parsed {"/tmp/work/src/foo/bar.clj" {10 {:covered 1 :total 1}}}]
+        (should= {10 {:covered 1 :total 1}}
+          (lcov-coverage-for-source parsed "src/foo/bar.clj")))))
+
   (context "coverage-for-range"
     (it "computes coverage percentage for a line range"
       (let [line-cov {3 {:covered 3 :total 5}

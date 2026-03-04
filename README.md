@@ -53,18 +53,28 @@ clj -M:crap combat movement    # only files matching "combat" or "movement"
 
 ## Coverage Mapping Notes
 
-By default, crap4clj looks for Cloverage HTML using the source file path.
+crap4clj uses coverage in this order:
+
+1. per-source-file HTML (`target/coverage/...<source>.html`)
+2. `target/coverage/lcov.info` (file-accurate line coverage)
+3. namespace HTML fallback (`.../<namespace>.clj.html` or `.cljc.html`)
 
 For split-file namespace patterns (multiple files loaded into one namespace via
-`in-ns` + `load`), crap4clj also falls back to namespace-based coverage pages
-when a per-file page is missing. It checks:
+`in-ns` + `load`), LCOV is the reliable option for per-function scoring because
+it preserves physical source file paths.
+
+If only namespace fallback HTML is available, crap4clj uses `defn` name matching
+and does not reuse mismatched line ranges. Unmatched functions are reported as
+`0.0%` and a warning is printed to stderr.
+
+Namespace fallback lookup checks:
 
 1. per-file path (for example `target/coverage/foo/bar.clj.html`)
 2. namespace `.clj` path (for example `target/coverage/foo/bar.clj.html`)
 3. namespace `.cljc` path (for example `target/coverage/foo/bar.cljc.html`)
 
-This prevents false `0.0%` function coverage in valid split-file namespace
-setups.
+To enable LCOV in your `:cov` alias, include Cloverage's `--lcov` output option
+so `target/coverage/lcov.info` is generated.
 
 ## CRAP Formula
 

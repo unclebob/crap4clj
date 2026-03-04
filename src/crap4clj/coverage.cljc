@@ -1,4 +1,5 @@
 (ns crap4clj.coverage
+  (:import (java.io File))
   (:require [clojure.string :as str]))
 
 (def ^:private span-pattern
@@ -9,6 +10,8 @@
 
 (def ^:private defn-line-pattern
   #"\(defn-?&nbsp;([^\s&\(\)\[\]\{\}\"]+)")
+
+(def ^:private lcov-da-pattern #"DA:(\d+),(\d+)")
 
 (defn parse-line-coverage [html]
   (let [matches (re-seq span-pattern html)]
@@ -60,6 +63,71 @@
                         (dec (count detailed-line-cov)))
             entries (subvec detailed-line-cov start-idx (inc end-idx))]
         (coverage-for-entries entries)))))
+
+(defn parse-lcov [text]
+  (loop [lines (str/split-lines text)
+         current-file nil
+         current-lines {}
+         out {}]
+    (if (empty? lines)
+      (if current-file
+        (assoc out current-file current-lines)
+        out)
+      (let [line (first lines)]
+        (cond
+          (str/starts-with? line "SF:")
+          (recur (rest lines)
+                 (subs line 3)
+                 {}
+                 (if current-file
+                   (assoc out current-file current-lines)
+                   out))
+
+          (= line "end_of_record")
+          (recur (rest lines)
+                 nil
+                 {}
+                 (if current-file
+                   (assoc out current-file current-lines)
+                   out))
+
+          current-file
+          (if-let [[_ ln-str count-str] (re-find lcov-da-pattern line)]
+            (let [ln (Integer/parseInt ln-str)
+                  count (Integer/parseInt count-str)]
+              (recur (rest lines)
+                     current-file
+                     (assoc current-lines ln {:covered (if (pos? count) 1 0)
+                                              :total 1})
+                     out))
+            (recur (rest lines) current-file current-lines out))
+
+          :else
+          (recur (rest lines) current-file current-lines out))))))
+
+(defn load-lcov [path]
+  (let [f (File. path)]
+    (when (.exists f)
+      (parse-lcov (slurp f)))))
+
+(defn- normalize-path [path]
+  (-> path
+      (str/replace "\\" "/")
+      (str/replace #"^\./" "")))
+
+(defn lcov-coverage-for-source [lcov-data source-path]
+  (when lcov-data
+    (let [source-file (File. source-path)
+          absolute-path (normalize-path (.getAbsolutePath source-file))
+          relative-path (normalize-path source-path)
+          candidates #{relative-path absolute-path}]
+      (or (some #(get lcov-data %) candidates)
+          (some (fn [[k v]]
+                  (let [nk (normalize-path k)]
+                    (when (or (str/ends-with? nk (str "/" relative-path))
+                              (= nk relative-path))
+                      v)))
+                lcov-data)))))
 
 (defn source-to-coverage-path [source-path]
   (str "target/coverage/" (subs source-path 4) ".html"))
