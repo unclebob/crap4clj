@@ -1,3 +1,4 @@
+;; mutation-tested: 2026-03-04
 (ns crap4clj.core
   (:require [clojure.java.io :as io]
             [clojure.string :as str]

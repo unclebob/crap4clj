@@ -1,5 +1,6 @@
 (ns crap4clj.coverage-spec
-  (:require [speclj.core :refer :all]
+  (:require [clojure.java.io :as io]
+            [speclj.core :refer :all]
             [crap4clj.coverage :refer :all]))
 
 (describe "coverage HTML parsing"
@@ -77,7 +78,30 @@
         (should (pos? (:sf-count d)))
         (should (seq (:closest-sf d)))
         (should= "/tmp/empire/architecture/dependency_checker/core_base.clj"
-          (:sf (first (:closest-sf d)))))))
+          (:sf (first (:closest-sf d)))))
+
+    (it "loads lcov from disk when file exists"
+      (let [path "target/test-lcov.info"
+            body (str "SF:src/foo/bar.clj\n"
+                      "DA:1,1\n"
+                      "end_of_record\n")]
+        (spit path body)
+        (try
+          (should= {1 {:covered 1 :total 1}}
+            (get (load-lcov path) "src/foo/bar.clj"))
+          (finally
+            (io/delete-file path true)))))
+
+    (it "returns nil when lcov file is missing"
+      (should= nil (load-lcov "target/definitely-missing-lcov.info")))
+
+    (it "matches and rejects suffix segments correctly"
+      (should (#'crap4clj.coverage/suffix-segments-match?
+                "/a/b/src/foo/bar.clj"
+                "src/foo/bar.clj"))
+      (should-not (#'crap4clj.coverage/suffix-segments-match?
+                    "/a/b/src/foo/bar.clj"
+                    "src/foo/baz.clj"))))
 
   (context "coverage-for-range"
     (it "computes coverage percentage for a line range"
@@ -140,3 +164,4 @@
     (it "converts nested path with underscores"
       (should= "foo.game-loop"
         (source-to-namespace "src/foo/game_loop.cljc")))))
+)

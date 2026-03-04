@@ -1,3 +1,4 @@
+;; mutation-tested: 2026-03-04
 (ns crap4clj.complexity
   (:require [clojure.string :as str]))
 

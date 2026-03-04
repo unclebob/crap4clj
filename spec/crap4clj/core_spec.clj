@@ -160,6 +160,15 @@
           (should= "" (str err))))))
 
   (context "run-coverage-with-lcov"
+    (it "returns 0 immediately when --lcov run succeeds"
+      (let [calls (atom [])]
+        (with-redefs [crap4clj.core/run-coverage
+                      (fn [cmd]
+                        (swap! calls conj cmd)
+                        0)]
+          (should= 0 (#'crap4clj.core/run-coverage-with-lcov)))
+        (should= ["clj -M:cov --lcov"] @calls)))
+
     (it "retries without --lcov when first command fails"
       (let [calls (atom [])
             err (java.io.StringWriter.)]
@@ -171,6 +180,26 @@
             (should= 0 (#'crap4clj.core/run-coverage-with-lcov))))
         (should= ["clj -M:cov --lcov" "clj -M:cov"] @calls)
         (should (str/includes? (str err) "retrying without --lcov")))))
+
+  (context "ensure-coverage-success!"
+    (it "is a no-op for zero exit code"
+      (let [out (java.io.StringWriter.)]
+        (binding [*out* out]
+          (#'crap4clj.core/ensure-coverage-success! 0)
+          (should= "" (str out))))))
+
+  (context "maybe-debug-lcov-mismatch"
+    (it "delegates when lcov exists but source lookup misses"
+      (let [called? (atom false)]
+        (with-redefs [crap4clj.core/debug-lcov-mismatch (fn [_ _] (reset! called? true))]
+          (#'crap4clj.core/maybe-debug-lcov-mismatch {:x 1} nil "src/foo.clj")
+          (should @called?))))
+
+    (it "does nothing when lcov lookup succeeds"
+      (let [called? (atom false)]
+        (with-redefs [crap4clj.core/debug-lcov-mismatch (fn [_ _] (reset! called? true))]
+          (#'crap4clj.core/maybe-debug-lcov-mismatch {:x 1} {1 {:covered 1 :total 1}} "src/foo.clj")
+          (should-not @called?)))))
 
   (context "-main"
     (it "runs pipeline and prints report"

@@ -3,6 +3,33 @@
             [crap4clj.complexity :refer :all]))
 
 (describe "cyclomatic complexity"
+  (context "private helper behavior"
+    (it "recognizes open and close brackets"
+      (should (#'crap4clj.complexity/open-bracket? \())
+      (should (#'crap4clj.complexity/open-bracket? \{))
+      (should (#'crap4clj.complexity/open-bracket? \[))
+      (should-not (#'crap4clj.complexity/open-bracket? \a))
+      (should (#'crap4clj.complexity/close-bracket? \)))
+      (should (#'crap4clj.complexity/close-bracket? \}))
+      (should (#'crap4clj.complexity/close-bracket? \]))
+      (should-not (#'crap4clj.complexity/close-bracket? \a)))
+
+    (it "counts top level forms in mixed nested text"
+      (should= 4
+        (#'crap4clj.complexity/count-top-level-forms
+          "(foo {:a 1} [1 2] (bar x))" 1)))
+
+    (it "counts clauses for threading and pairwise forms"
+      (should= 2
+        (#'crap4clj.complexity/count-clauses "(some-> x inc dec)" "some->" 0))
+      (should= 2
+        (#'crap4clj.complexity/count-clauses "(cond a 1 b 2)" "cond" 0)))
+
+    (it "extracts no functions from comments and strings"
+      (let [source (str "; (defn ignored [] 1)\n"
+                        "\"(defn ignored2 [] 2)\"\n")]
+        (should= [] (extract-functions source)))))
+
   (context "base complexity"
     (it "returns 1 for an empty function"
       (should= 1 (cyclomatic-complexity "(defn foo [])")))
@@ -240,4 +267,19 @@
             with-leading (extract-functions (str data-form funcs))
             score-map (fn [fns] (into {} (map (juxt :name :complexity) fns)))]
         (should= {"alpha" 2 "omega" 1} (score-map with-middle))
-        (should= {"alpha" 2 "omega" 1} (score-map with-leading))))))
+        (should= {"alpha" 2 "omega" 1} (score-map with-leading))))
+
+    (it "handles comment mode transitions and nested parens while tracking defs"
+      (let [source (str "(defn alpha []\n"
+                        "  (let [x (inc 1)] ; inline comment\n"
+                        "    x))\n"
+                        "; full line comment\n"
+                        "(defn beta []\n"
+                        "  (if true\n"
+                        "    (str \"ok\")\n"
+                        "    (do 0)))\n"
+                        "; trailing comment without newline")
+            fns (extract-functions source)]
+        (should= ["alpha" "beta"] (map :name fns))
+        (should= 1 (:start-line (first fns)))
+        (should= 5 (:start-line (second fns)))))))
