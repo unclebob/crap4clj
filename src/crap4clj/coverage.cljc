@@ -14,6 +14,8 @@
 
 (def ^:private lcov-da-pattern #"DA:(\d+),(\d+)")
 
+(def ^:private lcov-sf-prefix "SF:")
+
 (defn parse-line-coverage [html]
   (let [matches (re-seq span-pattern html)]
     (into {}
@@ -65,46 +67,41 @@
             entries (subvec detailed-line-cov start-idx (inc end-idx))]
         (coverage-for-entries entries)))))
 
+(defn- finalize-lcov-record [state]
+  (if-let [f (:current-file state)]
+    (-> state
+        (update :out assoc f (:current-lines state))
+        (assoc :current-file nil :current-lines {}))
+    state))
+
+(defn- start-lcov-record [state line]
+  (-> state
+      finalize-lcov-record
+      (assoc :current-file (subs line (count lcov-sf-prefix))
+             :current-lines {})))
+
+(defn- add-lcov-da [state line]
+  (if-let [[_ ln-str count-str] (re-find lcov-da-pattern line)]
+    (let [ln (Integer/parseInt ln-str)
+          count (Integer/parseInt count-str)]
+      (update state :current-lines assoc ln {:covered (if (pos? count) 1 0)
+                                             :total 1}))
+    state))
+
+(defn- parse-lcov-line [state line]
+  (cond
+    (str/starts-with? line lcov-sf-prefix) (start-lcov-record state line)
+    (= line "end_of_record") (finalize-lcov-record state)
+    (:current-file state) (add-lcov-da state line)
+    :else state))
+
 (defn parse-lcov [text]
-  (loop [lines (str/split-lines text)
-         current-file nil
-         current-lines {}
-         out {}]
-    (if (empty? lines)
-      (if current-file
-        (assoc out current-file current-lines)
-        out)
-      (let [line (first lines)]
-        (cond
-          (str/starts-with? line "SF:")
-          (recur (rest lines)
-                 (subs line 3)
-                 {}
-                 (if current-file
-                   (assoc out current-file current-lines)
-                   out))
-
-          (= line "end_of_record")
-          (recur (rest lines)
-                 nil
-                 {}
-                 (if current-file
-                   (assoc out current-file current-lines)
-                   out))
-
-          current-file
-          (if-let [[_ ln-str count-str] (re-find lcov-da-pattern line)]
-            (let [ln (Integer/parseInt ln-str)
-                  count (Integer/parseInt count-str)]
-              (recur (rest lines)
-                     current-file
-                     (assoc current-lines ln {:covered (if (pos? count) 1 0)
-                                              :total 1})
-                     out))
-            (recur (rest lines) current-file current-lines out))
-
-          :else
-          (recur (rest lines) current-file current-lines out))))))
+  (let [lines (str/split-lines text)
+        state (reduce parse-lcov-line {:current-file nil
+                                       :current-lines {}
+                                       :out {}}
+                      lines)]
+    (:out (finalize-lcov-record state))))
 
 (defn load-lcov [path]
   (let [f (File. path)]

@@ -21,32 +21,47 @@
 (defn- close-bracket? [ch]
   (or (= ch \)) (= ch \}) (= ch \])))
 
+(defn- top-level-form-start? [depth in-form]
+  (and (= depth 1) (not in-form)))
+
+(defn- maybe-inc-forms [forms depth in-form]
+  (if (top-level-form-start? depth in-form)
+    (inc forms)
+    forms))
+
+(defn- next-state-open [depth forms in-form]
+  [(inc depth) (maybe-inc-forms forms depth in-form) true])
+
+(defn- next-state-close [depth forms in-form]
+  [(dec depth) forms (if (= depth 1) false in-form)])
+
+(defn- next-state-whitespace [depth forms]
+  [depth forms (not (= depth 1))])
+
+(defn- next-state-token [depth forms in-form]
+  [depth (maybe-inc-forms forms depth in-form) true])
+
+(defn- done-counting-top-level-forms? [text i depth]
+  (or (>= i (count text)) (zero? depth)))
+
+(defn- top-level-next-state [ch depth forms in-form]
+  (cond
+    (open-bracket? ch) (next-state-open depth forms in-form)
+    (close-bracket? ch) (next-state-close depth forms in-form)
+    (Character/isWhitespace ch) (next-state-whitespace depth forms)
+    :else (next-state-token depth forms in-form)))
+
 (defn- count-top-level-forms
   "Counts top-level forms in text starting at idx (inside an open paren).
    Returns the count of forms at depth 1 before the matching close paren."
   [text start-idx]
   (loop [i start-idx, depth 1, forms 0, in-form false]
-    (if (or (>= i (count text)) (zero? depth))
+    (if (done-counting-top-level-forms? text i depth)
       forms
       (let [ch (nth text i)]
-        (cond
-          (open-bracket? ch)
-          (recur (inc i) (inc depth)
-                 (if (and (= depth 1) (not in-form)) (inc forms) forms)
-                 true)
-
-          (close-bracket? ch)
-          (recur (inc i) (dec depth) forms
-                 (if (= depth 1) false in-form))
-
-          (Character/isWhitespace ch)
-          (recur (inc i) depth forms
-                 (if (= depth 1) false in-form))
-
-          :else
-          (recur (inc i) depth
-                 (if (and (= depth 1) (not in-form)) (inc forms) forms)
-                 true))))))
+        (let [[next-depth next-forms next-in-form]
+              (top-level-next-state ch depth forms in-form)]
+          (recur (inc i) next-depth next-forms next-in-form))))))
 
 (defn- skip-to-body
   "Returns index just past the form keyword (e.g., past 'cond' in '(cond ...')."
@@ -59,18 +74,31 @@
         i
         (recur (inc i))))))
 
+(def ^:private form-skip-count
+  {"condp" 2
+   "case" 1
+   "cond->" 1
+   "cond->>" 1
+   "some->" 1
+   "some->>" 1})
+
+(def ^:private thread-form-types #{"some->" "some->>"})
+
+(defn- pairwise-clause-count [form-type remaining]
+  (let [case-default? (and (= form-type "case") (odd? remaining))
+        base (quot remaining 2)]
+    (if case-default?
+      (inc base)
+      base)))
+
 (defn- count-clauses [text form-type match-start]
   (let [body-start (skip-to-body text match-start)
         total-forms (count-top-level-forms text body-start)
-        skip (case form-type "condp" 2 "case" 1 "cond->" 1 "cond->>" 1
-                             "some->" 1 "some->>" 1 0)
-        remaining (- total-forms skip)
-        has-default? (and (= form-type "case") (odd? remaining))]
-    (case form-type
-      ("some->" "some->>") remaining
-      (if has-default?
-        (inc (quot remaining 2))
-        (quot remaining 2)))))
+        skip (get form-skip-count form-type 0)
+        remaining (- total-forms skip)]
+    (if (thread-form-types form-type)
+      remaining
+      (pairwise-clause-count form-type remaining))))
 
 (defn- count-cond-decisions [clean]
   (let [matcher (re-matcher cond-form-pattern clean)]

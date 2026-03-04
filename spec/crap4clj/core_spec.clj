@@ -1,6 +1,7 @@
 (ns crap4clj.core-spec
   (:require [clojure.java.io :as io]
             [speclj.core :refer :all]
+            [clojure.string :as str]
             [crap4clj.core :refer :all]))
 
 (describe "crap4clj core"
@@ -135,3 +136,50 @@
 
     (it "returns non-zero for a failing command"
       (should-not= 0 (run-coverage "false"))))
+
+  (context "debug-lcov-mismatch"
+    (it "prints diagnostics when debug mode is enabled"
+      (with-redefs [crap4clj.core/env-true? (constantly true)
+                    crap4clj.coverage/lcov-diagnostics
+                    (fn [_ _]
+                      {:source-path "src/foo.clj"
+                       :source-candidates ["src/foo.clj"]
+                       :sf-count 2
+                       :closest-sf [{:sf "src/bar.clj" :score 2}]})]
+        (let [err (java.io.StringWriter.)]
+          (binding [*err* err]
+            (#'crap4clj.core/debug-lcov-mismatch "src/foo.clj" {:any :data}))
+          (should (str/includes? (str err) "LCOV debug: no SF match"))
+          (should (str/includes? (str err) "closest SF candidates")))))
+
+    (it "does not print diagnostics when debug mode is disabled"
+      (with-redefs [crap4clj.core/env-true? (constantly false)]
+        (let [err (java.io.StringWriter.)]
+          (binding [*err* err]
+            (#'crap4clj.core/debug-lcov-mismatch "src/foo.clj" {:any :data}))
+          (should= "" (str err))))))
+
+  (context "run-coverage-with-lcov"
+    (it "retries without --lcov when first command fails"
+      (let [calls (atom [])
+            err (java.io.StringWriter.)]
+        (with-redefs [crap4clj.core/run-coverage
+                      (fn [cmd]
+                        (swap! calls conj cmd)
+                        (if (= cmd "clj -M:cov --lcov") 1 0))]
+          (binding [*err* err]
+            (should= 0 (#'crap4clj.core/run-coverage-with-lcov))))
+        (should= ["clj -M:cov --lcov" "clj -M:cov"] @calls)
+        (should (str/includes? (str err) "retrying without --lcov")))))
+
+  (context "-main"
+    (it "runs pipeline and prints report"
+      (let [out (java.io.StringWriter.)]
+        (with-redefs [crap4clj.core/delete-coverage-dir (fn [_] nil)
+                      crap4clj.core/run-coverage-with-lcov (fn [] 0)
+                      crap4clj.coverage/load-lcov (fn [_] {:lcov true})
+                      crap4clj.core/sorted-entries (fn [_ _] [{:name "foo"}])
+                      crap4clj.crap/format-report (fn [_] "CRAP REPORT")]
+          (binding [*out* out]
+            (-main "foo")
+            (should (str/includes? (str out) "CRAP REPORT")))))))
