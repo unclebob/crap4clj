@@ -109,10 +109,12 @@
         (spit source-path source)
         (spit coverage-path html)
         (try
-          (let [entry (first (analyze-file source-path))]
-            (should= "part-fn" (:name entry))
-            (should= nil (:coverage entry))
-            (should= nil (:crap entry)))
+          (let [err (java.io.StringWriter.)]
+            (binding [*err* err]
+              (let [entry (first (analyze-file source-path))]
+                (should= "part-fn" (:name entry))
+                (should= nil (:coverage entry))
+                (should= nil (:crap entry)))))
           (finally
             (io/delete-file coverage-path true)
             (io/delete-file source-path true)
