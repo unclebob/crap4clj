@@ -1,8 +1,0 @@
-{:paths ["src" "spec"]
- :deps {speclj/speclj {:mvn/version "3.12.1"}}
- :tasks {test {:doc "Run specs under babashka"
-               :task (do (require '[speclj.main])
-                         ((resolve 'speclj.main/-main) "-c"))}
-         crap {:doc "Run CRAP analysis"
-               :task (do (require '[crap4clj.core])
-                         (apply (resolve 'crap4clj.core/-main) *command-line-args*))}}}
