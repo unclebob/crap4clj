@@ -311,4 +311,18 @@
             fns (extract-functions source)]
         (should= ["alpha" "beta"] (map :name fns))
         (should= 1 (:start-line (first fns)))
-        (should= 5 (:start-line (second fns)))))))
+        (should= 5 (:start-line (second fns)))))
+
+    (it "keeps parsing after character literals that include a quote"
+      (let [source "(def x #{\\\"})\n(defn foo [] 1)"
+            fns (extract-functions source)]
+        (should= 1 (count fns))
+        (should= "foo" (:name (first fns)))))
+
+    (it "keeps parsing after named and bracket character literals"
+      (let [source (str "(def ^:private token-delimiters "
+                        "#{\\space \\newline \\tab \\( \\) \\\"})\n"
+                        "(defn foo [] 1)\n"
+                        "(defn bar [] 2)")
+            fns (extract-functions source)]
+        (should= ["foo" "bar"] (map :name fns))))))

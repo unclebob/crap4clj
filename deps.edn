@@ -3,6 +3,10 @@
  :aliases {:spec {:main-opts ["-m" "speclj.main" "-c"]
                   :extra-deps {speclj/speclj {:mvn/version "3.10.0"}}
                   :extra-paths ["spec"]}
+           :spec-structure-check {:extra-deps {io.github.unclebob/speclj-structure-check
+                                               {:git/url "https://github.com/unclebob/speclj-structure-check.git"
+                                                :git/sha "7cc804c4e99b3482ca1d8a26b735ed41751a03ab"}}
+                                  :main-opts ["-m" "speclj-structure-check.core"]}
            :cov {:extra-deps {cloverage/cloverage {:mvn/version "1.2.4"}
                               speclj/speclj {:mvn/version "3.10.0"}}
                  :extra-paths ["spec"]

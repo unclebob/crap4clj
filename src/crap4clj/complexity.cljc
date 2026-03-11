@@ -60,6 +60,21 @@
 (defn- clear-when [pred value]
   (if pred nil value))
 
+(def ^:private char-literal-delimiters
+  #{\( \) \[ \] \{ \} \" \; \,})
+
+(defn- char-literal-end [source idx]
+  (let [n (count source)
+        first-char-idx (inc idx)]
+    (if (>= first-char-idx n)
+      n
+      (loop [i (inc first-char-idx)]
+        (if (or (>= i n)
+                (Character/isWhitespace (nth source i))
+                (char-literal-delimiters (nth source i)))
+          i
+          (recur (inc i)))))))
+
 (defn- done-counting-top-level-forms? [text i depth]
   (or (>= i (count text)) (zero? depth)))
 
@@ -183,6 +198,10 @@
             (cond
               (= ch \;)
               (recur (inc i) line depth :comment false
+                     form-start-idx form-start-line forms)
+
+              (= ch \\)
+              (recur (char-literal-end source i) line depth :normal false
                      form-start-idx form-start-line forms)
 
               (= ch \")
