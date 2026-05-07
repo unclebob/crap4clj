@@ -2,6 +2,7 @@
 (ns crap4clj.core
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
+            [crap4clj.cli :as cli]
             [crap4clj.complexity :as complexity]
             [crap4clj.coverage :as coverage]
             [crap4clj.crap :as crap]))
@@ -151,15 +152,21 @@
 (defn- exit! [status]
   (System/exit status))
 
-(defn- sorted-entries [args lcov-data]
+(defn- sorted-entries [options lcov-data]
   (let [sources (find-source-files)
-        filtered (filter-sources sources (vec args))
+        filtered (filter-sources sources (:module-filters options))
         all-entries (mapcat #(analyze-file % lcov-data) filtered)]
     (crap/sort-by-crap all-entries)))
 
+(defn run [options]
+  (case (:action options)
+    :help (println (:message options))
+    :analyze (do
+               (delete-coverage-dir "target/coverage")
+               (ensure-coverage-success! (run-coverage-with-lcov))
+               (let [lcov-data (coverage/load-lcov "target/coverage/lcov.info")
+                     sorted (sorted-entries options lcov-data)]
+                 (println (crap/format-report sorted))))))
+
 (defn -main [& args]
-  (delete-coverage-dir "target/coverage")
-  (ensure-coverage-success! (run-coverage-with-lcov))
-  (let [lcov-data (coverage/load-lcov "target/coverage/lcov.info")
-        sorted (sorted-entries args lcov-data)]
-    (println (crap/format-report sorted))))
+  (run (cli/parse-args args)))

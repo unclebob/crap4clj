@@ -216,8 +216,34 @@
         (with-redefs [crap4clj.core/delete-coverage-dir (fn [_] nil)
                       crap4clj.core/run-coverage-with-lcov (fn [] 0)
                       crap4clj.coverage/load-lcov (fn [_] {:lcov true})
-                      crap4clj.core/sorted-entries (fn [_ _] [{:name "foo"}])
+                      crap4clj.core/sorted-entries
+                      (fn [options _]
+                        (should= ["foo"] (:module-filters options))
+                        [{:name "foo"}])
                       crap4clj.crap/format-report (fn [_] "CRAP REPORT")]
           (binding [*out* out]
             (-main "foo")
-            (should (str/includes? (str out) "CRAP REPORT")))))))
+            (should (str/includes? (str out) "CRAP REPORT"))))))
+
+    (it "runs through parsed command maps"
+      (let [out (java.io.StringWriter.)]
+        (with-redefs [crap4clj.core/run (fn [options]
+                                          (println (:action options)))]
+          (binding [*out* out]
+            (-main "foo")
+            (should (str/includes? (str out) ":analyze")))))))
+
+  (context "run"
+    (it "prints help without running coverage or analysis"
+      (let [out (java.io.StringWriter.)
+            forbidden (fn [& _]
+                        (throw (ex-info "help must not run analysis" {})))]
+        (with-redefs [crap4clj.core/delete-coverage-dir forbidden
+                      crap4clj.core/run-coverage-with-lcov forbidden
+                      crap4clj.coverage/load-lcov forbidden
+                      crap4clj.core/sorted-entries forbidden]
+          (binding [*out* out]
+            (run {:action :help
+                  :message "Usage: clj -M:crap\n--help"})
+            (should (str/includes? (str out) "Usage: clj -M:crap"))
+            (should (str/includes? (str out) "--help")))))))
