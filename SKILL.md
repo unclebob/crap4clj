@@ -29,8 +29,6 @@ The example above uses `speclj.cloverage` as the runner. For `clojure.test` proj
 
 Adjust the `-p` (source path) and `-s` (test path) flags in `:cov` to match your project layout.
 
-## Usage
-
 ```bash
 # Analyze all source files under src/
 clj -M:crap
@@ -38,6 +36,8 @@ clj -M:crap
 # Filter to specific modules
 clj -M:crap combat movement
 ```
+
+## Usage
 
 crap4clj automatically deletes stale coverage reports, runs `clj -M:cov`, and then analyzes the results.
 

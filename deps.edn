@@ -1,14 +1,14 @@
 {:paths ["src"]
  :deps {org.clojure/clojure {:mvn/version "1.12.0"}}
  :aliases {:spec {:main-opts ["-m" "speclj.main" "-c"]
-                  :extra-deps {speclj/speclj {:mvn/version "3.10.0"}}
+                  :extra-deps {speclj/speclj {:mvn/version "3.12.1"}}
                   :extra-paths ["spec"]}
            :spec-structure-check {:extra-deps {io.github.unclebob/speclj-structure-check
                                                {:git/url "https://github.com/unclebob/speclj-structure-check.git"
                                                 :git/sha "7cc804c4e99b3482ca1d8a26b735ed41751a03ab"}}
                                   :main-opts ["-m" "speclj-structure-check.core"]}
            :cov {:extra-deps {cloverage/cloverage {:mvn/version "1.2.4"}
-                              speclj/speclj {:mvn/version "3.10.0"}}
+                              speclj/speclj {:mvn/version "3.12.1"}}
                  :extra-paths ["spec"]
                  :main-opts ["-m" "speclj.cloverage" "--" "-p" "src" "-s" "spec" "--lcov"]}
            :mutate {:main-opts ["-m" "clj-mutate.core"]
@@ -16,6 +16,6 @@
                                  {:git/url "https://github.com/unclebob/clj-mutate.git"
                                   :git/sha "223da6c1a814265d0a714417def997ce7878a8da"}
                                  org.clojure/tools.reader {:mvn/version "1.4.2"}
-                                 speclj/speclj {:mvn/version "3.10.0"}}
+                                 speclj/speclj {:mvn/version "3.12.1"}}
                     :extra-paths ["spec"]}
            :crap {:main-opts ["-m" "crap4clj.core"]}}}

@@ -13,8 +13,8 @@
       (run! io/delete-file (reverse (file-seq dir))))))
 
 (defn run-coverage [command]
-  (let [parts (.split command " ")
-        pb (ProcessBuilder. (java.util.Arrays/asList parts))]
+  (let [parts (vec (.split command " "))
+        pb (ProcessBuilder. ^java.util.List parts)]
     (.inheritIO pb)
     (.waitFor (.start pb))))
 
