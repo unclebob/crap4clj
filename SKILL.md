@@ -1,6 +1,6 @@
 ---
 name: crap4clj
-description: Use when the user asks for a CRAP report, cyclomatic complexity analysis, or code quality metrics on a Clojure project
+description: "Calculates cyclomatic complexity and CRAP scores for Clojure functions by combining complexity analysis with Cloverage test coverage data, generating sorted reports that identify high-risk under-tested code. Use when the user asks for a CRAP report, cyclomatic complexity analysis, or code quality metrics on a Clojure project."
 ---
 
 # crap4clj — CRAP Metric for Clojure
@@ -32,6 +32,9 @@ Adjust the `-p` (source path) and `-s` (test path) flags in `:cov` to match your
 ## Usage
 
 ```bash
+# First verify Cloverage works on its own
+clj -M:cov
+
 # Analyze all source files under src/
 clj -M:crap
 
@@ -71,3 +74,9 @@ simple-fn                      my.namespace                          1  100.0%  
 5. Reads Cloverage HTML for per-line form coverage
 6. Applies CRAP formula: `CC² × (1 - cov)³ + CC`
 7. Sorts by CRAP score descending and prints report
+
+## Troubleshooting
+
+- **Cloverage fails to run**: Verify `:cov` alias paths match your project layout — `-p` should point to your source root and `-s` to your test root.
+- **All coverage shows 0%**: Ensure `clj -M:cov` runs successfully on its own before running `:crap`. Check that test files are found under the specified test path.
+- **Functions show N/A coverage**: This occurs with split-file namespace patterns (`in-ns` + `load`). Add `--lcov` to your `:cov` alias main-opts for accurate per-file coverage.
