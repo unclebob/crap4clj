@@ -30,6 +30,10 @@
                         "\"(defn ignored2 [] 2)\"\n")]
         (should= [] (extract-functions source))))
 
+    (it "strips many string literals without overflowing the regex engine"
+      (let [source (slurp "src/crap4clj/complexity.cljc")]
+        (should (seq (#'crap4clj.complexity/strip-strings source)))))
+
     (it "transitions from comment mode at newline and resumes parsing"
       (let [source (str "; first comment line\n"
                         "(defn parsed [] 1)\n")

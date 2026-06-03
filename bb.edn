@@ -1,0 +1,4 @@
+{:paths ["src"]
+ :tasks {crap {:doc "Run crap4clj"
+               :requires ([crap4clj.core :as core])
+               :task (apply core/-main *command-line-args*)}}}

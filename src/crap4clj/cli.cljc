@@ -2,6 +2,7 @@
 
 (def help-message
   (str "Usage: clj -M:crap [module-filter ...]\n"
+       "   or: bb crap [module-filter ...]\n"
        "\n"
        "Runs Cloverage, computes CRAP scores, and prints a report sorted worst first.\n"
        "\n"

@@ -14,7 +14,7 @@
 
 (defn run-coverage [command]
   (let [parts (.split command " ")
-        pb (ProcessBuilder. (java.util.Arrays/asList parts))]
+        pb (ProcessBuilder. (vec parts))]
     (.inheritIO pb)
     (.waitFor (.start pb))))
 

@@ -6,7 +6,20 @@ Combines cyclomatic complexity with test coverage to identify functions that are
 
 ## Quick Start
 
-Add to your project's `deps.edn`:
+Use either a Babashka `bb.edn` task or a normal Clojure `deps.edn` alias.
+Babashka is recommended for day-to-day use because it starts much faster and avoids JVM startup overhead in the `crap4clj` launcher.
+The `clj` launcher remains fully supported and is useful as a compatibility fallback when debugging runtime-specific behavior.
+
+For Babashka, add a `crap` task to your project's `bb.edn`:
+
+```clojure
+{:paths ["src"]
+ :tasks {crap {:doc "Run crap4clj"
+               :requires ([crap4clj.core :as core])
+               :task (apply core/-main *command-line-args*)}}}
+```
+
+For Clojure CLI, add to your project's `deps.edn`:
 
 ```clojure
 :cov  {:extra-deps {cloverage/cloverage {:mvn/version "1.2.4"}}
@@ -17,10 +30,11 @@ Add to your project's `deps.edn`:
        :main-opts ["-m" "crap4clj.core"]}
 ```
 
-Run:
+Both launchers accept the same module filters:
 
 ```bash
 clj -M:crap    # deletes old coverage, runs Cloverage, analyzes
+bb crap        # same, using the Babashka task
 ```
 
 crap4clj automatically deletes stale coverage reports, runs `clj -M:cov --lcov`
@@ -51,7 +65,34 @@ Pass module name fragments as arguments to filter:
 
 ```bash
 clj -M:crap combat movement    # only files matching "combat" or "movement"
+bb crap combat movement        # same, using the Babashka task
 ```
+
+## Recommended Workflow
+
+Run CRAP analysis before refactoring, mutation testing, or work on a risky module:
+
+```bash
+bb crap
+clj -M:spec
+```
+
+Use `bb crap` for local feedback. Use `clj -M:crap` when you want to compare behavior against the normal Clojure launcher.
+
+Start with the worst reported functions. A high score means the function is both complex and under-covered, so reducing either complexity or adding focused tests will lower risk.
+
+For focused work, pass one or more source path fragments:
+
+```bash
+bb crap src/myapp/orders src/myapp/billing
+```
+
+Recommended loop:
+1. Run `bb crap` or `bb crap path/fragment`.
+2. Pick the highest scoring function in the module you are changing.
+3. Add characterization specs until coverage is clear enough to change the code.
+4. Refactor complex branches or split large functions.
+5. Rerun CRAP and specs before moving to the next risky function.
 
 ## Coverage Mapping Notes
 
@@ -122,6 +163,7 @@ Then ask Claude Code for a "CRAP report" and it will know how to set up and run 
 ```bash
 clj -M:spec    # run tests
 clj -M:crap    # run on own source
+bb crap        # run on own source via Babashka task
 ```
 
 ## License

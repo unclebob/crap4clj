@@ -9,7 +9,33 @@
   #"\((some->>|some->|cond->>|cond->|cond|condp|case)[\s\)]")
 
 (defn- strip-strings [text]
-  (str/replace text #"\"(?:[^\"\\]|\\.)*\"" "\"\""))
+  (let [n (count text)]
+    (loop [i 0
+           mode :normal
+           escaped false
+           out (StringBuilder.)]
+      (if (>= i n)
+        (str out)
+        (let [ch (nth text i)
+              newline? (= ch \newline)]
+          (case mode
+            :string
+            (cond
+              escaped
+              (recur (inc i) :string false (.append out (if newline? ch \space)))
+
+              (= ch \\)
+              (recur (inc i) :string true (.append out \space))
+
+              (= ch \")
+              (recur (inc i) :normal false (.append out ch))
+
+              :else
+              (recur (inc i) :string false (.append out (if newline? ch \space))))
+
+            (if (= ch \")
+              (recur (inc i) :string false (.append out ch))
+              (recur (inc i) :normal false (.append out ch)))))))))
 
 (defn- strip-comments [text]
   (->> (str/split-lines text)
