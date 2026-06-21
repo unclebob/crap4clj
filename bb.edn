@@ -1,4 +1,12 @@
 {:paths ["src"]
+ :deps {io.github.unclebob/deintroverter4clj
+        {:git/url "https://github.com/unclebob/deintroverter4clj.git"
+         :git/sha "8505b4d045ec44d7adc75452c02dbbc8d33fddd1"}}
  :tasks {crap {:doc "Run crap4clj"
                :requires ([crap4clj.core :as core])
-               :task (apply core/-main *command-line-args*)}}}
+               :task (apply core/-main *command-line-args*)}
+         int {:doc "Run deintroverter"
+              :requires ([deintroverter.core :as deintroverter])
+              :task (apply deintroverter/-main
+                           (or (seq *command-line-args*)
+                               ["--project-root" "." "spec"]))}}}
