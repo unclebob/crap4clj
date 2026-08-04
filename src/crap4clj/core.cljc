@@ -13,8 +13,7 @@
       (run! io/delete-file (reverse (file-seq dir))))))
 
 (defn run-coverage [command]
-  (let [parts (.split command " ")
-        pb (ProcessBuilder. (vec parts))]
+  (let [pb (ProcessBuilder. ["sh" "-c" command])]
     (.inheritIO pb)
     (.waitFor (.start pb))))
 
@@ -127,20 +126,35 @@
      (maybe-debug-lcov-mismatch lcov-data lcov-line-cov source-path)
      (entries-for-source source-path source fns ns-name lcov-line-cov))))
 
-(defn find-source-files []
-  (->> (file-seq (io/file "src"))
-       (filter #(re-find #"\.cljc?$" (.getName %)))
-       (map #(.getPath %))
-       sort))
+(defn source-files-in-root [source-root]
+  (let [root (io/file source-root)]
+    (if (.exists root)
+      (->> (file-seq root)
+           (filter #(.isFile %))
+           (filter #(re-find #"\.cljc?$" (.getName %)))
+           (map #(.getPath %)))
+      [])))
 
-(defn- run-coverage-with-lcov []
-  (let [exit-with-lcov (run-coverage "clj -M:cov --lcov")]
-    (if (zero? exit-with-lcov)
-      0
-      (do
-        (binding [*out* *err*]
-          (println "Warning: clj -M:cov --lcov failed; retrying without --lcov."))
-        (run-coverage "clj -M:cov")))))
+(defn find-source-files
+  ([] (find-source-files ["src"]))
+  ([source-roots]
+   (->> source-roots
+        (mapcat source-files-in-root)
+        distinct
+        sort)))
+
+(defn- run-coverage-with-lcov
+  ([] (run-coverage-with-lcov nil))
+  ([coverage-command]
+   (if coverage-command
+     (run-coverage coverage-command)
+     (let [exit-with-lcov (run-coverage "clj -M:cov --lcov")]
+       (if (zero? exit-with-lcov)
+         0
+         (do
+           (binding [*out* *err*]
+             (println "Warning: clj -M:cov --lcov failed; retrying without --lcov."))
+           (run-coverage "clj -M:cov")))))))
 
 (declare exit!)
 
@@ -153,18 +167,22 @@
   (System/exit status))
 
 (defn- sorted-entries [options lcov-data]
-  (let [sources (find-source-files)
+  (let [sources (find-source-files (:source-roots options))
         filtered (filter-sources sources (:module-filters options))
         all-entries (mapcat #(analyze-file % lcov-data) filtered)]
     (crap/sort-by-crap all-entries)))
+
+(defn- prepare-coverage! [options]
+  (when-not (:use-existing-coverage? options)
+    (delete-coverage-dir "target/coverage")
+    (ensure-coverage-success! (run-coverage-with-lcov (:coverage-command options)))))
 
 (defn run [options]
   (case (:action options)
     :help (println (:message options))
     :analyze (do
-               (delete-coverage-dir "target/coverage")
-               (ensure-coverage-success! (run-coverage-with-lcov))
-               (let [lcov-data (coverage/load-lcov "target/coverage/lcov.info")
+               (prepare-coverage! options)
+               (let [lcov-data (coverage/load-lcov (:lcov-path options))
                      sorted (sorted-entries options lcov-data)]
                  (println (crap/format-report sorted))))))
 

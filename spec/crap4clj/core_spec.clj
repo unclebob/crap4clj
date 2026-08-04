@@ -42,7 +42,21 @@
     (it "finds .cljc and .clj files under src"
       (let [files (find-source-files)]
         (should (seq files))
-        (should (every? #(re-find #"\.cljc?$" %) files)))))
+        (should (every? #(re-find #"\.cljc?$" %) files))))
+
+    (it "finds files under configured source roots"
+      (let [dir (java.io.File. "target/source-root-demo/scripts")]
+        (.mkdirs dir)
+        (spit (java.io.File. dir "demo.clj") "(ns demo)\n")
+        (spit (java.io.File. dir "ignore.txt") "nope")
+        (try
+          (should= ["target/source-root-demo/scripts/demo.clj"]
+            (find-source-files ["target/source-root-demo/scripts"]))
+          (finally
+            (io/delete-file "target/source-root-demo/scripts/demo.clj" true)
+            (io/delete-file "target/source-root-demo/scripts/ignore.txt" true)
+            (io/delete-file "target/source-root-demo/scripts" true)
+            (io/delete-file "target/source-root-demo" true))))))
 
   (context "full pipeline integration"
     (it "analyzes a real source file"
@@ -137,7 +151,10 @@
       (should= 0 (run-coverage "true")))
 
     (it "returns non-zero for a failing command"
-      (should-not= 0 (run-coverage "false"))))
+      (should-not= 0 (run-coverage "false")))
+
+    (it "runs commands through the shell so quoted args stay intact"
+      (should= 0 (run-coverage "test \"two words\" = \"two words\""))))
 
   (context "debug-lcov-mismatch"
     (it "prints diagnostics when debug mode is enabled"
@@ -162,6 +179,15 @@
           (should= "" (str err))))))
 
   (context "run-coverage-with-lcov"
+    (it "runs a custom coverage command when supplied"
+      (let [calls (atom [])]
+        (with-redefs [crap4clj.core/run-coverage
+                      (fn [cmd]
+                        (swap! calls conj cmd)
+                        0)]
+          (should= 0 (#'crap4clj.core/run-coverage-with-lcov "bb coverage")))
+        (should= ["bb coverage"] @calls)))
+
     (it "returns 0 immediately when --lcov run succeeds"
       (let [calls (atom [])]
         (with-redefs [crap4clj.core/run-coverage
@@ -216,7 +242,7 @@
     (it "runs pipeline and prints report"
       (let [out (java.io.StringWriter.)]
         (with-redefs [crap4clj.core/delete-coverage-dir (fn [_] nil)
-                      crap4clj.core/run-coverage-with-lcov (fn [] 0)
+                      crap4clj.core/run-coverage-with-lcov (fn [_] 0)
                       crap4clj.coverage/load-lcov (fn [_] {:lcov true})
                       crap4clj.core/sorted-entries
                       (fn [options _]
@@ -248,4 +274,27 @@
             (run {:action :help
                   :message "Usage: clj -M:crap\n--help"})
             (should (str/includes? (str out) "Usage: clj -M:crap"))
-            (should (str/includes? (str out) "--help")))))))
+            (should (str/includes? (str out) "--help"))))))
+
+    (it "uses existing coverage without deleting or running coverage"
+      (let [out (java.io.StringWriter.)
+            forbidden (fn [& _]
+                        (throw (ex-info "existing coverage must not run coverage setup" {})))]
+        (with-redefs [crap4clj.core/delete-coverage-dir forbidden
+                      crap4clj.core/run-coverage-with-lcov forbidden
+                      crap4clj.coverage/load-lcov (fn [path]
+                                                    (should= "custom/lcov.info" path)
+                                                    {:lcov true})
+                      crap4clj.core/sorted-entries
+                      (fn [options _]
+                        (should= ["custom/src"] (:source-roots options))
+                        [])
+                      crap4clj.crap/format-report (fn [_] "CRAP REPORT")]
+          (binding [*out* out]
+            (run {:action :analyze
+                  :source-roots ["custom/src"]
+                  :lcov-path "custom/lcov.info"
+                  :use-existing-coverage? true
+                  :coverage-command nil
+                  :module-filters []})
+            (should (str/includes? (str out) "CRAP REPORT")))))))

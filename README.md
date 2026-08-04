@@ -30,16 +30,22 @@ For Clojure CLI, add to your project's `deps.edn`:
        :main-opts ["-m" "crap4clj.core"]}
 ```
 
-Both launchers accept the same module filters:
+Both launchers accept the same options and module filters:
 
 ```bash
 clj -M:crap    # deletes old coverage, runs Cloverage, analyzes
 bb crap        # same, using the Babashka task
+bb crap --source-root swarmforge/scripts --use-existing-coverage
 ```
 
 crap4clj automatically deletes stale coverage reports, runs `clj -M:cov --lcov`
 (falling back to `clj -M:cov` if needed), and then analyzes the results. Your
 project must have a `:cov` alias configured with Cloverage.
+
+Use `--source-root <path>` to analyze source roots other than `src`; repeat it
+for multiple roots. Use `--use-existing-coverage` with `--lcov <path>` when a
+project generates LCOV through a custom command. Use `--coverage-command <cmd>`
+to let crap4clj run that custom command before analysis.
 
 The example above uses `speclj.cloverage` as the runner. For `clojure.test` projects, use `cloverage.coverage` instead:
 
