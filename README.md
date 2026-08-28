@@ -10,10 +10,13 @@ Use either a Babashka `bb.edn` task or a normal Clojure `deps.edn` alias.
 Babashka is recommended for day-to-day use because it starts much faster and avoids JVM startup overhead in the `crap4clj` launcher.
 The `clj` launcher remains fully supported and is useful as a compatibility fallback when debugging runtime-specific behavior.
 
-For Babashka, add a `crap` task to your project's `bb.edn`:
+For Babashka, add crap4clj and a `crap` task to your project's `bb.edn`:
 
 ```clojure
 {:paths ["src"]
+ :deps {io.github.unclebob/crap4clj
+        {:git/url "https://github.com/unclebob/crap4clj"
+         :git/sha "<current-sha>"}}
  :tasks {crap {:doc "Run crap4clj"
                :requires ([crap4clj.core :as core])
                :task (apply core/-main *command-line-args*)}}}
@@ -45,20 +48,61 @@ Babashka scripts outside `src/`, point `--source-root` at their directory:
 bb crap --source-root scripts --use-existing-coverage
 ```
 
-Shebang-style scripts (for example, files beginning with `#!/usr/bin/env bb`)
-are supported. For coverage-aware CRAP scores, the configured LCOV report must
-contain `SF:` entries for the `.bb` paths. Use `--lcov` with existing coverage,
-or a custom coverage task that generates it:
+### Coverage for `.bb` files
 
-```bash
-bb crap --source-root scripts \
-  --coverage-command "bb coverage" \
-  --lcov target/coverage/lcov.info
+Shebang-style scripts (for example, files beginning with `#!/usr/bin/env bb`)
+are supported. Coverage requires Babashka 1.12.215 or newer and the
+[Babashka-compatible Cloverage code](https://github.com/cloverage/cloverage/pull/356),
+which has not yet been released to Clojars. Pin the current compatible commit
+and run it through the crap4clj adapter, which enables `.bb` namespace discovery
+and resource loading before Cloverage starts:
+
+```clojure
+{:paths ["scripts" "test"]
+ :deps {io.github.unclebob/crap4clj
+        {:git/url "https://github.com/unclebob/crap4clj"
+         :git/sha "<current-sha>"}
+        cloverage/cloverage
+        {:git/url "https://github.com/cloverage/cloverage.git"
+         :git/sha "61e3cac426e9907a9dd01c37597f85c71a57ff90"
+         :deps/root "cloverage"}}
+ :tasks
+ {coverage:bb
+  {:doc "Cover Babashka scripts"
+   :requires ([crap4clj.bb-coverage :as coverage])
+   :task (apply coverage/-main
+                "-p" "scripts" "-s" "test" "--lcov"
+                *command-line-args*)}
+  crap
+  {:doc "Run crap4clj on Babashka scripts"
+   :requires ([crap4clj.core :as core])
+   :task (apply core/-main
+                "--source-root" "scripts"
+                "--coverage-command" "bb coverage:bb"
+                *command-line-args*)}}}
 ```
 
-crap4clj automatically deletes stale coverage reports, runs `clj -M:cov --lcov`
+Then run:
+
+```bash
+bb crap
+```
+
+Covered `.bb` files must declare an `ns`, and tests must exercise their
+functions in the Cloverage process. Tests that launch a separate `bb` process
+execute uninstrumented code and do not contribute coverage. Guard an executable
+script's entry point so instrumentation can load it without running the CLI:
+
+```clojure
+(when (= *file* (System/getProperty "babashka.file"))
+  (apply -main *command-line-args*))
+```
+
+By default, crap4clj deletes stale coverage reports and runs `clj -M:cov --lcov`
 (falling back to `clj -M:cov` if needed), and then analyzes the results. Your
-project must have a `:cov` alias configured with Cloverage.
+project must have a `:cov` alias configured with Cloverage. A
+`--coverage-command`, such as the `bb coverage:bb` task above, replaces that
+default command.
 
 Use `--source-root <path>` to analyze source roots other than `src`; repeat it
 for multiple roots. Use `--use-existing-coverage` with `--lcov <path>` when a

@@ -72,6 +72,26 @@
           (should (<= 0 (:coverage e) 100))
           (should (pos? (:crap e)))))))
 
+  (context "sorted-entries"
+    (it "passes each configured source root into file analysis"
+      (let [calls (atom [])]
+        (with-redefs [crap4clj.core/source-files-in-root
+                      (fn [root]
+                        (case root
+                          "scripts" ["scripts/task.bb"]
+                          "src" ["src/app/core.clj"]))
+                      crap4clj.core/analyze-file
+                      (fn [source _ root]
+                        (swap! calls conj [source root])
+                        [])]
+          (#'crap4clj.core/sorted-entries
+            {:source-roots ["scripts" "src"]
+             :module-filters []}
+            nil))
+        (should= [["scripts/task.bb" "scripts"]
+                  ["src/app/core.clj" "src"]]
+                 @calls))))
+
   (context "analyze-file namespace coverage fallback"
     (it "uses namespace coverage report when split-file coverage report is missing"
       (let [source-path "src/test/split_ns_demo/part_a.clj"

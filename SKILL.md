@@ -46,10 +46,18 @@ bb crap --source-root scripts --use-existing-coverage
 ```
 
 crap4clj automatically deletes stale coverage reports, runs `clj -M:cov`, and then analyzes the results.
-It discovers `.clj`, `.cljc`, and `.bb` source files. Coverage-aware scores for
-`.bb` files require an LCOV report containing their source paths; use `--lcov`
-and `--use-existing-coverage`, or provide the generating task with
-`--coverage-command`.
+It discovers `.clj`, `.cljc`, and `.bb` source files.
+
+For `.bb` coverage, use Babashka 1.12.215 or newer and pin Cloverage commit
+`61e3cac426e9907a9dd01c37597f85c71a57ff90` with `:deps/root "cloverage"`.
+Run Cloverage through `crap4clj.bb-coverage/-main`; this adapter enables `.bb`
+namespace discovery and resource loading. Pass that task to crap4clj with
+`--coverage-command`. The scripts must declare namespaces, and tests must call
+the instrumented functions in-process rather than launch separate `bb`
+processes. Executable scripts must guard their `-main` invocation with a
+`babashka.file`/`*file*` equality check so instrumentation can load them without
+running the CLI. See the README's "Coverage for `.bb` files" section for the
+complete `bb.edn` configuration.
 
 ### Output
 
@@ -78,7 +86,7 @@ simple-fn                      my.namespace                          1  100.0%  
 2. Finds all `.clj`, `.cljc`, and `.bb` files under the configured source roots
 3. Extracts `defn`/`defn-` functions with line ranges
 4. Computes cyclomatic complexity (if/when/cond/condp/case/cond->/cond->>/some->/some->>/and/or/loop/catch)
-5. Reads Cloverage HTML for per-line form coverage
+5. Reads Cloverage HTML for per-line form coverage, including `.bb.html` reports
 6. Applies CRAP formula: `CC² × (1 - cov)³ + CC`
 7. Sorts by CRAP score descending and prints report
 

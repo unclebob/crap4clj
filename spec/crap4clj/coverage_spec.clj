@@ -125,7 +125,11 @@
 
     (it "preserves a non-src path for a Babashka script"
       (should= "target/coverage/scripts/report.bb.html"
-        (source-to-coverage-path "scripts/report.bb"))))
+        (source-to-coverage-path "scripts/report.bb")))
+
+    (it "maps a Babashka script relative to its configured source root"
+      (should= "target/coverage/report.bb.html"
+        (source-to-coverage-path "scripts/report.bb" "scripts"))))
 
   (context "namespace-to-coverage-paths"
     (it "maps namespace to Cloverage-style HTML paths"
@@ -170,6 +174,10 @@
     (it "converts a .bb path without assuming an src prefix"
       (should= "scripts.report"
         (source-to-namespace "scripts/report.bb")))
+
+    (it "converts a .bb path relative to its configured source root"
+      (should= "report"
+        (source-to-namespace "scripts/report.bb" "scripts")))
 
     (it "converts nested path with underscores"
       (should= "foo.game-loop"

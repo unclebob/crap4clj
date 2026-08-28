@@ -180,12 +180,27 @@
        :sf-count (count normalized-keys)
        :closest-sf closest})))
 
-(defn- source-relative-path [source-path]
-  (-> (normalize-path source-path)
-      (str/replace #"^src/" "")))
+(defn- source-relative-path
+  ([source-path]
+   (source-relative-path source-path "src"))
+  ([source-path source-root]
+   (let [source (normalize-path source-path)
+         root (-> (or source-root "src")
+                  normalize-path
+                  (str/replace #"/$" ""))
+         prefix (str root "/")]
+     (cond
+       (= root ".") source
+       (str/starts-with? source prefix) (subs source (count prefix))
+       :else source))))
 
-(defn source-to-coverage-path [source-path]
-  (str "target/coverage/" (source-relative-path source-path) ".html"))
+(defn source-to-coverage-path
+  ([source-path]
+   (source-to-coverage-path source-path nil))
+  ([source-path source-root]
+   (str "target/coverage/"
+        (source-relative-path source-path source-root)
+        ".html")))
 
 (defn namespace-to-coverage-paths [ns-name]
   (let [ns-path (-> ns-name
@@ -203,16 +218,22 @@
       (some-> (re-find #"\(\s*in-ns\s+\(quote\s+([A-Za-z0-9*+!_?.\-/]+)\)\s*\)" source)
               second)))
 
-(defn source-to-coverage-paths [source-path source]
-  (let [declared-ns (extract-declared-namespace source)]
-    (->> (concat [(source-to-coverage-path source-path)]
-                 (when declared-ns
-                   (namespace-to-coverage-paths declared-ns)))
-         distinct
-         vec)))
+(defn source-to-coverage-paths
+  ([source-path source]
+   (source-to-coverage-paths source-path source nil))
+  ([source-path source source-root]
+   (let [declared-ns (extract-declared-namespace source)]
+     (->> (concat [(source-to-coverage-path source-path source-root)]
+                  (when declared-ns
+                    (namespace-to-coverage-paths declared-ns)))
+          distinct
+          vec))))
 
-(defn source-to-namespace [source-path]
-  (-> (source-relative-path source-path)
-      (str/replace #"\.(?:cljc?|bb)$" "")
-      (str/replace "/" ".")
-      (str/replace "_" "-")))
+(defn source-to-namespace
+  ([source-path]
+   (source-to-namespace source-path nil))
+  ([source-path source-root]
+   (-> (source-relative-path source-path source-root)
+       (str/replace #"\.(?:cljc?|bb)$" "")
+       (str/replace "/" ".")
+       (str/replace "_" "-"))))
