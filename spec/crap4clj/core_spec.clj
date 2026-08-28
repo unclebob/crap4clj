@@ -39,21 +39,24 @@
         (should-be-a Double (:crap (first entries))))))
 
   (context "find-source-files"
-    (it "finds .cljc and .clj files under src"
+    (it "finds Clojure and Babashka source files under src"
       (let [files (find-source-files)]
         (should (seq files))
-        (should (every? #(re-find #"\.cljc?$" %) files))))
+        (should (every? #(re-find #"\.(?:cljc?|bb)$" %) files))))
 
     (it "finds files under configured source roots"
       (let [dir (java.io.File. "target/source-root-demo/scripts")]
         (.mkdirs dir)
         (spit (java.io.File. dir "demo.clj") "(ns demo)\n")
+        (spit (java.io.File. dir "task.bb") "(defn task [] :done)\n")
         (spit (java.io.File. dir "ignore.txt") "nope")
         (try
-          (should= ["target/source-root-demo/scripts/demo.clj"]
+          (should= ["target/source-root-demo/scripts/demo.clj"
+                    "target/source-root-demo/scripts/task.bb"]
             (find-source-files ["target/source-root-demo/scripts"]))
           (finally
             (io/delete-file "target/source-root-demo/scripts/demo.clj" true)
+            (io/delete-file "target/source-root-demo/scripts/task.bb" true)
             (io/delete-file "target/source-root-demo/scripts/ignore.txt" true)
             (io/delete-file "target/source-root-demo/scripts" true)
             (io/delete-file "target/source-root-demo" true))))))
@@ -110,7 +113,28 @@
             (should= "only-fn" (:name entry))
             (should= 100.0 (:coverage entry)))
           (finally
-            (io/delete-file source-path true))))))
+            (io/delete-file source-path true)))))
+
+    (it "analyzes a shebang-style .bb file with lcov coverage"
+      (let [source-path "target/bb-source-demo/scripts/report.bb"
+            source (str "#!/usr/bin/env bb\n"
+                        "(defn report [ready?]\n"
+                        "  (if ready? :ready :waiting))\n")
+            lcov-data {source-path {2 {:covered 1 :total 1}
+                                    3 {:covered 1 :total 1}}}]
+        (.mkdirs (java.io.File. "target/bb-source-demo/scripts"))
+        (spit source-path source)
+        (try
+          (let [entry (first (analyze-file source-path lcov-data))]
+            (should= "report" (:name entry))
+            (should= "target.bb-source-demo.scripts.report" (:namespace entry))
+            (should= 2 (:complexity entry))
+            (should= 100.0 (:coverage entry))
+            (should= 2.0 (:crap entry)))
+          (finally
+            (io/delete-file source-path true)
+            (io/delete-file "target/bb-source-demo/scripts" true)
+            (io/delete-file "target/bb-source-demo" true))))))
 
   (context "analyze-file namespace fallback without matching defn"
     (it "marks coverage as indeterminate when namespace html does not include the function"

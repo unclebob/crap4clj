@@ -121,12 +121,17 @@
 
     (it "maps nested source path"
       (should= "target/coverage/foo/bar/army.clj.html"
-        (source-to-coverage-path "src/foo/bar/army.clj"))))
+        (source-to-coverage-path "src/foo/bar/army.clj")))
+
+    (it "preserves a non-src path for a Babashka script"
+      (should= "target/coverage/scripts/report.bb.html"
+        (source-to-coverage-path "scripts/report.bb"))))
 
   (context "namespace-to-coverage-paths"
     (it "maps namespace to Cloverage-style HTML paths"
       (should= ["target/coverage/foo/bar_baz.clj.html"
-                "target/coverage/foo/bar_baz.cljc.html"]
+                "target/coverage/foo/bar_baz.cljc.html"
+                "target/coverage/foo/bar_baz.bb.html"]
         (namespace-to-coverage-paths "foo.bar-baz"))))
 
   (context "extract-declared-namespace"
@@ -149,7 +154,8 @@
                     "(in-ns 'empire.architecture.dependency-checker)")]
         (should= ["target/coverage/empire/architecture/dependency_checker/core_base_config.clj.html"
                   "target/coverage/empire/architecture/dependency_checker.clj.html"
-                  "target/coverage/empire/architecture/dependency_checker.cljc.html"]
+                  "target/coverage/empire/architecture/dependency_checker.cljc.html"
+                  "target/coverage/empire/architecture/dependency_checker.bb.html"]
           paths))))
 
   (context "source-to-namespace"
@@ -160,6 +166,10 @@
     (it "converts .clj source path to namespace string"
       (should= "foo.combat"
         (source-to-namespace "src/foo/combat.clj")))
+
+    (it "converts a .bb path without assuming an src prefix"
+      (should= "scripts.report"
+        (source-to-namespace "scripts/report.bb")))
 
     (it "converts nested path with underscores"
       (should= "foo.game-loop"

@@ -38,6 +38,24 @@ bb crap        # same, using the Babashka task
 bb crap --source-root swarmforge/scripts --use-existing-coverage
 ```
 
+Source discovery includes `.clj`, `.cljc`, and `.bb` files. To analyze
+Babashka scripts outside `src/`, point `--source-root` at their directory:
+
+```bash
+bb crap --source-root scripts --use-existing-coverage
+```
+
+Shebang-style scripts (for example, files beginning with `#!/usr/bin/env bb`)
+are supported. For coverage-aware CRAP scores, the configured LCOV report must
+contain `SF:` entries for the `.bb` paths. Use `--lcov` with existing coverage,
+or a custom coverage task that generates it:
+
+```bash
+bb crap --source-root scripts \
+  --coverage-command "bb coverage" \
+  --lcov target/coverage/lcov.info
+```
+
 crap4clj automatically deletes stale coverage reports, runs `clj -M:cov --lcov`
 (falling back to `clj -M:cov` if needed), and then analyzes the results. Your
 project must have a `:cov` alias configured with Cloverage.
@@ -106,7 +124,7 @@ crap4clj uses coverage in this order:
 
 1. per-source-file HTML (`target/coverage/...<source>.html`)
 2. `target/coverage/lcov.info` (file-accurate line coverage)
-3. namespace HTML fallback (`.../<namespace>.clj.html` or `.cljc.html`)
+3. namespace HTML fallback (`.../<namespace>.clj.html`, `.cljc.html`, or `.bb.html`)
 
 For split-file namespace patterns (multiple files loaded into one namespace via
 `in-ns` + `load`), LCOV is the reliable option for per-function scoring because
@@ -121,6 +139,7 @@ Namespace fallback lookup checks:
 1. per-file path (for example `target/coverage/foo/bar.clj.html`)
 2. namespace `.clj` path (for example `target/coverage/foo/bar.clj.html`)
 3. namespace `.cljc` path (for example `target/coverage/foo/bar.cljc.html`)
+4. namespace `.bb` path (for example `target/coverage/foo/bar.bb.html`)
 
 To enable LCOV in your `:cov` alias, include Cloverage's `--lcov` output option
 so `target/coverage/lcov.info` is generated.

@@ -48,7 +48,8 @@
       (let [command (parse-args ["--help"])]
         (should= :help (:action command))
         (should (str/includes? (:message command) "Usage: clj -M:crap"))
-        (should (str/includes? (:message command) "bb crap"))))
+        (should (str/includes? (:message command) "bb crap"))
+        (should (str/includes? (:message command) ".bb files"))))
 
     (it "returns a help command for -h"
       (let [command (parse-args ["-h"])]

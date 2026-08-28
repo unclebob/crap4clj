@@ -180,15 +180,20 @@
        :sf-count (count normalized-keys)
        :closest-sf closest})))
 
+(defn- source-relative-path [source-path]
+  (-> (normalize-path source-path)
+      (str/replace #"^src/" "")))
+
 (defn source-to-coverage-path [source-path]
-  (str "target/coverage/" (subs source-path 4) ".html"))
+  (str "target/coverage/" (source-relative-path source-path) ".html"))
 
 (defn namespace-to-coverage-paths [ns-name]
   (let [ns-path (-> ns-name
                     (str/replace "-" "_")
                     (str/replace "." "/"))]
     [(str "target/coverage/" ns-path ".clj.html")
-     (str "target/coverage/" ns-path ".cljc.html")]))
+     (str "target/coverage/" ns-path ".cljc.html")
+     (str "target/coverage/" ns-path ".bb.html")]))
 
 (defn extract-declared-namespace [source]
   (or (some-> (re-find #"\(\s*ns\s+([A-Za-z0-9*+!_?.\-/]+)" source)
@@ -207,8 +212,7 @@
          vec)))
 
 (defn source-to-namespace [source-path]
-  (-> source-path
-      (subs 4)
-      (str/replace #"\.cljc?$" "")
+  (-> (source-relative-path source-path)
+      (str/replace #"\.(?:cljc?|bb)$" "")
       (str/replace "/" ".")
       (str/replace "_" "-")))

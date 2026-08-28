@@ -1,6 +1,6 @@
 ---
 name: crap4clj
-description: "Calculates cyclomatic complexity and CRAP scores for Clojure functions by combining complexity analysis with Cloverage test coverage data, generating sorted reports that identify high-risk under-tested code. Use when the user asks for a CRAP report, cyclomatic complexity analysis, or code quality metrics on a Clojure project."
+description: "Calculates cyclomatic complexity and CRAP scores for Clojure and Babashka functions by combining complexity analysis with test coverage data, generating sorted reports that identify high-risk under-tested code. Use when the user asks for a CRAP report, cyclomatic complexity analysis, or code quality metrics on a Clojure or Babashka project."
 ---
 
 # crap4clj — CRAP Metric for Clojure
@@ -40,9 +40,16 @@ clj -M:crap
 
 # Filter to specific modules
 clj -M:crap combat movement
+
+# Analyze Babashka scripts using an existing LCOV report
+bb crap --source-root scripts --use-existing-coverage
 ```
 
 crap4clj automatically deletes stale coverage reports, runs `clj -M:cov`, and then analyzes the results.
+It discovers `.clj`, `.cljc`, and `.bb` source files. Coverage-aware scores for
+`.bb` files require an LCOV report containing their source paths; use `--lcov`
+and `--use-existing-coverage`, or provide the generating task with
+`--coverage-command`.
 
 ### Output
 
@@ -68,7 +75,7 @@ simple-fn                      my.namespace                          1  100.0%  
 ## How It Works
 
 1. Deletes old coverage reports and runs Cloverage (`clj -M:cov`)
-2. Finds all `.clj` and `.cljc` files under `src/`
+2. Finds all `.clj`, `.cljc`, and `.bb` files under the configured source roots
 3. Extracts `defn`/`defn-` functions with line ranges
 4. Computes cyclomatic complexity (if/when/cond/condp/case/cond->/cond->>/some->/some->>/and/or/loop/catch)
 5. Reads Cloverage HTML for per-line form coverage
