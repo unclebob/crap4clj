@@ -38,6 +38,7 @@ Both launchers accept the same options and module filters:
 ```bash
 clj -M:crap    # deletes old coverage, runs Cloverage, analyzes
 bb crap        # same, using the Babashka task
+# Also writes .metrics/crap.edn (function CC, coverage, CRAP).
 bb crap --source-root swarmforge/scripts --use-existing-coverage
 ```
 

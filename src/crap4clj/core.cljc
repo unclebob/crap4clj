@@ -194,6 +194,21 @@
     (delete-coverage-dir "target/coverage")
     (ensure-coverage-success! (run-coverage-with-lcov (:coverage-command options)))))
 
+(defn metrics-path
+  ([] (metrics-path (System/getProperty "user.dir")))
+  ([root] (.getPath (io/file root ".metrics" "crap.edn"))))
+
+(defn write-metrics-snapshot!
+  ([entries] (write-metrics-snapshot! entries (System/getProperty "user.dir")))
+  ([entries root]
+   (let [f (io/file (metrics-path root))]
+     (io/make-parents f)
+     (spit f (str (pr-str {:entries
+                           (mapv #(select-keys % [:name :namespace :complexity :coverage :crap])
+                                 entries)})
+                  "\n"))
+     (.getPath f))))
+
 (defn run [options]
   (case (:action options)
     :help (println (:message options))
@@ -201,6 +216,7 @@
                (prepare-coverage! options)
                (let [lcov-data (coverage/load-lcov (:lcov-path options))
                      sorted (sorted-entries options lcov-data)]
+                 (write-metrics-snapshot! sorted)
                  (println (crap/format-report sorted))))))
 
 (defn -main [& args]

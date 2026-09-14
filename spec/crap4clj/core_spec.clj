@@ -72,6 +72,21 @@
           (should (<= 0 (:coverage e) 100))
           (should (pos? (:crap e)))))))
 
+  (context "write-metrics-snapshot!"
+    (it "writes function entries to .metrics/crap.edn"
+      (let [root (.getCanonicalPath (io/file "target" "crap-metrics-demo"))
+            entries [{:name "foo" :namespace "demo.ns" :complexity 2 :coverage 80.0 :crap 2.16}]]
+        (.mkdirs (io/file root))
+        (try
+          (write-metrics-snapshot! entries root)
+          (let [data (read-string (slurp (metrics-path root)))]
+            (should= "foo" (get-in data [:entries 0 :name]))
+            (should= 2 (get-in data [:entries 0 :complexity])))
+          (finally
+            (io/delete-file (metrics-path root) true)
+            (io/delete-file (io/file root ".metrics") true)
+            (io/delete-file root true))))))
+
   (context "sorted-entries"
     (it "passes each configured source root into file analysis"
       (let [calls (atom [])]
