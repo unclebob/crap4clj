@@ -38,9 +38,24 @@ Both launchers accept the same options and module filters:
 ```bash
 clj -M:crap    # deletes old coverage, runs Cloverage, analyzes
 bb crap        # same, using the Babashka task
-# Also writes .metrics/crap.edn (function CC, coverage, CRAP).
 bb crap --source-root swarmforge/scripts --use-existing-coverage
 ```
+
+Every successful analysis also writes **`.metrics/crap.edn`** at the project root.
+That file is a full rebuild (not differential): a map `{:entries [...]}` of
+
+```clojure
+{:name "layout"
+ :namespace "uml-viewer.layout"
+ :complexity 8          ;; cyclomatic complexity (CC)
+ :coverage 82.0         ;; Cloverage form coverage, 0–100
+ :crap 3.4}
+```
+
+Commit `.metrics/` in the project you are measuring. Tools that display CRAP
+(for example [uml-viewer](https://github.com/unclebob/uml-viewer)) overlay this
+file by **namespace + function name**. Rename or move of a function is a new
+entry; there is no identity matching.
 
 Source discovery includes `.clj`, `.cljc`, and `.bb` files. To analyze
 Babashka scripts outside `src/`, point `--source-root` at their directory:
@@ -118,6 +133,8 @@ The example above uses `speclj.cloverage` as the runner. For `clojure.test` proj
 ```
 
 ## Output
+
+A table on stdout, plus `.metrics/crap.edn` (see Quick Start).
 
 ```
 CRAP Report
