@@ -57,7 +57,11 @@ Commit `.metrics/` in the project you are measuring. Tools that display CRAP
 file by **namespace + function name**. Rename or move of a function is a new
 entry; there is no identity matching.
 
-Source discovery includes `.clj`, `.cljc`, `.cljs`, and `.bb` files. To analyze
+Source discovery includes `.clj`, `.cljc`, `.cljs`, and `.bb` files. Cloverage
+instruments `.cljs` when you run coverage through `crap4clj.cljs-coverage`
+(it adds `.cljs` to tools.namespace's JVM file list). Forms are still read
+with `:features #{:clj}`, so JavaScript interop must sit behind `#?(:cljs …)`
+with a `#?(:clj …)` branch the JVM can eval. To analyze
 Babashka scripts outside `src/`, point `--source-root` at their directory:
 
 ```bash

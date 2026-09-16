@@ -47,6 +47,8 @@ bb crap --source-root scripts --use-existing-coverage
 
 crap4clj automatically deletes stale coverage reports, runs `clj -M:cov`, and then analyzes the results.
 It discovers `.clj`, `.cljc`, `.cljs`, and `.bb` source files.
+Cloverage instruments `.cljs` via `crap4clj.cljs-coverage` (JVM discovery);
+JS interop needs a `#?(:clj …)` branch because forms are read with `:clj`.
 
 For `.bb` coverage, use Babashka 1.12.215 or newer and pin Cloverage commit
 `61e3cac426e9907a9dd01c37597f85c71a57ff90` with `:deps/root "cloverage"`.
