@@ -208,6 +208,7 @@
                     (str/replace "." "/"))]
     [(str "target/coverage/" ns-path ".clj.html")
      (str "target/coverage/" ns-path ".cljc.html")
+     (str "target/coverage/" ns-path ".cljs.html")
      (str "target/coverage/" ns-path ".bb.html")]))
 
 (defn extract-declared-namespace [source]
@@ -234,6 +235,6 @@
    (source-to-namespace source-path nil))
   ([source-path source-root]
    (-> (source-relative-path source-path source-root)
-       (str/replace #"\.(?:cljc?|bb)$" "")
+       (str/replace #"\.(?:clj[cs]?|bb)$" "")
        (str/replace "/" ".")
        (str/replace "_" "-"))))

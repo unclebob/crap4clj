@@ -142,7 +142,7 @@
     (if (.exists root)
       (->> (file-seq root)
            (filter #(.isFile %))
-           (filter #(re-find #"\.(?:cljc?|bb)$" (.getName %)))
+           (filter #(re-find #"\.(?:clj[cs]?|bb)$" (.getName %)))
            (map #(.getPath %)))
       [])))
 

@@ -119,6 +119,10 @@
       (should= "target/coverage/foo/combat.cljc.html"
         (source-to-coverage-path "src/foo/combat.cljc")))
 
+    (it "maps a ClojureScript source path"
+      (should= "target/coverage/foo/browser/global_scores.cljs.html"
+        (source-to-coverage-path "src/foo/browser/global_scores.cljs")))
+
     (it "maps nested source path"
       (should= "target/coverage/foo/bar/army.clj.html"
         (source-to-coverage-path "src/foo/bar/army.clj")))
@@ -135,6 +139,7 @@
     (it "maps namespace to Cloverage-style HTML paths"
       (should= ["target/coverage/foo/bar_baz.clj.html"
                 "target/coverage/foo/bar_baz.cljc.html"
+                "target/coverage/foo/bar_baz.cljs.html"
                 "target/coverage/foo/bar_baz.bb.html"]
         (namespace-to-coverage-paths "foo.bar-baz"))))
 
@@ -159,6 +164,7 @@
         (should= ["target/coverage/empire/architecture/dependency_checker/core_base_config.clj.html"
                   "target/coverage/empire/architecture/dependency_checker.clj.html"
                   "target/coverage/empire/architecture/dependency_checker.cljc.html"
+                  "target/coverage/empire/architecture/dependency_checker.cljs.html"
                   "target/coverage/empire/architecture/dependency_checker.bb.html"]
           paths))))
 
@@ -170,6 +176,10 @@
     (it "converts .clj source path to namespace string"
       (should= "foo.combat"
         (source-to-namespace "src/foo/combat.clj")))
+
+    (it "converts .cljs source path to namespace string"
+      (should= "foo.browser.global-scores"
+        (source-to-namespace "src/foo/browser/global_scores.cljs")))
 
     (it "converts a .bb path without assuming an src prefix"
       (should= "scripts.report"

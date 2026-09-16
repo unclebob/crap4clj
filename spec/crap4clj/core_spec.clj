@@ -42,20 +42,23 @@
     (it "finds Clojure and Babashka source files under src"
       (let [files (find-source-files)]
         (should (seq files))
-        (should (every? #(re-find #"\.(?:cljc?|bb)$" %) files))))
+        (should (every? #(re-find #"\.(?:clj[cs]?|bb)$" %) files))))
 
     (it "finds files under configured source roots"
       (let [dir (java.io.File. "target/source-root-demo/scripts")]
         (.mkdirs dir)
         (spit (java.io.File. dir "demo.clj") "(ns demo)\n")
+        (spit (java.io.File. dir "client.cljs") "(ns client)\n")
         (spit (java.io.File. dir "task.bb") "(defn task [] :done)\n")
         (spit (java.io.File. dir "ignore.txt") "nope")
         (try
-          (should= ["target/source-root-demo/scripts/demo.clj"
+          (should= ["target/source-root-demo/scripts/client.cljs"
+                    "target/source-root-demo/scripts/demo.clj"
                     "target/source-root-demo/scripts/task.bb"]
             (find-source-files ["target/source-root-demo/scripts"]))
           (finally
             (io/delete-file "target/source-root-demo/scripts/demo.clj" true)
+            (io/delete-file "target/source-root-demo/scripts/client.cljs" true)
             (io/delete-file "target/source-root-demo/scripts/task.bb" true)
             (io/delete-file "target/source-root-demo/scripts/ignore.txt" true)
             (io/delete-file "target/source-root-demo/scripts" true)

@@ -9,7 +9,7 @@
        "\n"
        "Options:\n"
        "  -h, --help                    Print this help message and exit.\n"
-       "  -s, --source-root <path>      Root containing .clj, .cljc, or .bb files. May be repeated. Default: src.\n"
+       "  -s, --source-root <path>      Root containing .clj, .cljc, .cljs, or .bb files. May be repeated. Default: src.\n"
        "      --lcov <path>             LCOV file to read. Default: target/coverage/lcov.info.\n"
        "      --use-existing-coverage   Do not delete or regenerate target/coverage.\n"
        "      --coverage-command <cmd>  Coverage command to run instead of clj -M:cov --lcov.\n"

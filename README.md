@@ -57,7 +57,7 @@ Commit `.metrics/` in the project you are measuring. Tools that display CRAP
 file by **namespace + function name**. Rename or move of a function is a new
 entry; there is no identity matching.
 
-Source discovery includes `.clj`, `.cljc`, and `.bb` files. To analyze
+Source discovery includes `.clj`, `.cljc`, `.cljs`, and `.bb` files. To analyze
 Babashka scripts outside `src/`, point `--source-root` at their directory:
 
 ```bash
@@ -186,7 +186,7 @@ crap4clj uses coverage in this order:
 
 1. per-source-file HTML (`target/coverage/...<source>.html`)
 2. `target/coverage/lcov.info` (file-accurate line coverage)
-3. namespace HTML fallback (`.../<namespace>.clj.html`, `.cljc.html`, or `.bb.html`)
+3. namespace HTML fallback (`.../<namespace>.clj.html`, `.cljc.html`, `.cljs.html`, or `.bb.html`)
 
 For split-file namespace patterns (multiple files loaded into one namespace via
 `in-ns` + `load`), LCOV is the reliable option for per-function scoring because
@@ -201,7 +201,8 @@ Namespace fallback lookup checks:
 1. per-file path (for example `target/coverage/foo/bar.clj.html`)
 2. namespace `.clj` path (for example `target/coverage/foo/bar.clj.html`)
 3. namespace `.cljc` path (for example `target/coverage/foo/bar.cljc.html`)
-4. namespace `.bb` path (for example `target/coverage/foo/bar.bb.html`)
+4. namespace `.cljs` path (for example `target/coverage/foo/bar.cljs.html`)
+5. namespace `.bb` path (for example `target/coverage/foo/bar.bb.html`)
 
 To enable LCOV in your `:cov` alias, include Cloverage's `--lcov` output option
 so `target/coverage/lcov.info` is generated.
