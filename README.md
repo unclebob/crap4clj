@@ -129,6 +129,36 @@ for multiple roots. Use `--use-existing-coverage` with `--lcov <path>` when a
 project generates LCOV through a custom command. Use `--coverage-command <cmd>`
 to let crap4clj run that custom command before analysis.
 
+### `--doseq-double-count`
+
+Cloverage expands `doseq`/`for` into two copies of the body (chunked `.nth`
+and unchunked `first`/`next`). It instruments both, but at runtime only one
+copy runs. A fully tested body line then shows as **50% forms** in the HTML
+report (`15 out of 30 forms covered`). CRAP treats that as missing tests.
+It is a rewriter bug.
+
+**When to use it.** After a normal `clj -M:crap` (or `bb crap`) run, if a
+function you know is exercised still has ~50% coverage, open its
+`target/coverage/...html` file. If the `doseq`/`for` *body* lines are exact
+doubles (`N out of 2N`) while helpers outside the loop are 100%, this is
+the symptom.
+
+**What it does.** Re-run with `--doseq-double-count`. It prints a
+confirmation of matching files and line counts, recounts those lines as
+fully covered, then writes the CRAP table and `.metrics/crap.edn`. Example:
+
+```bash
+clj -M:crap --doseq-double-count
+# or, if coverage HTML is already current:
+clj -M:crap --doseq-double-count --use-existing-coverage
+```
+
+**What it will not do.** It does not rewrite Cloverage, does not change
+LCOV, and does not touch lines that are not inside a `doseq`/`for` or not
+exact 50%. Unrun bodies stay at 0%. Leave the flag off for everyday
+reports; turn it on only to confirm this fingerprint and get a fairer
+number.
+
 The example above uses `speclj.cloverage` as the runner. For `clojure.test` projects, use `cloverage.coverage` instead:
 
 ```clojure

@@ -11,6 +11,7 @@
                 :lcov-path "target/coverage/lcov.info"
                 :use-existing-coverage? false
                 :coverage-command nil
+                :doseq-double-count? false
                 :module-filters ["combat" "movement"]}
         (parse-args ["combat" "movement"])))
 
@@ -20,6 +21,7 @@
                 :lcov-path "tmp/lcov.info"
                 :use-existing-coverage? true
                 :coverage-command "bb coverage --out \"tmp/lcov file.info\""
+                :doseq-double-count? false
                 :module-filters ["squad"]}
         (parse-args ["--source-root" "src"
                      "-s" "swarmforge/scripts"
@@ -54,4 +56,16 @@
     (it "returns a help command for -h"
       (let [command (parse-args ["-h"])]
         (should= :help (:action command))
-        (should (str/includes? (:message command) "--help"))))))
+        (should (str/includes? (:message command) "--help"))))
+
+    (it "enables doseq double-count correction"
+      (let [command (parse-args ["--doseq-double-count" "combat"])]
+        (should= true (:doseq-double-count? command))
+        (should= ["combat"] (:module-filters command))))
+
+    (it "documents the doseq double-count option"
+      (let [command (parse-args ["--help"])]
+        (should (str/includes? (:message command) "--doseq-double-count"))
+        (should (str/includes? (:message command) "rewriter bug"))
+        (should (str/includes? (:message command) "15/30"))
+        (should (str/includes? (:message command) "Leave off unless you suspect this"))))))

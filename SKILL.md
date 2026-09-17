@@ -43,6 +43,9 @@ clj -M:crap combat movement
 
 # Analyze Babashka scripts using an existing LCOV report
 bb crap --source-root scripts --use-existing-coverage
+
+# Confirm Cloverage's doseq/for 50% form-count fingerprint and recount
+clj -M:crap --doseq-double-count
 ```
 
 crap4clj automatically deletes stale coverage reports, runs `clj -M:cov`, and then analyzes the results.
@@ -97,3 +100,4 @@ simple-fn                      my.namespace                          1  100.0%  
 - **Cloverage fails to run**: Verify `:cov` alias paths match your project layout — `-p` should point to your source root and `-s` to your test root.
 - **All coverage shows 0%**: Ensure `clj -M:cov` runs successfully on its own before running `:crap`. Check that test files are found under the specified test path.
 - **Functions show N/A coverage**: This occurs with split-file namespace patterns (`in-ns` + `load`). Add `--lcov` to your `:cov` alias main-opts for accurate per-file coverage.
+- **A tested `doseq`/`for` body shows ~50% forms (`N out of 2N` in the HTML)**: Cloverage instrumented both copies of the body. That is a rewriter bug, not missing tests. Re-run with `--doseq-double-count` to confirm the fingerprint and recount. Do not leave that flag on by default; it needs HTML form counts, not LCOV-only.

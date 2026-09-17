@@ -1,4 +1,4 @@
-;; mutation-tested: 2026-03-04
+;; mutation-tested: 2026-09-17
 (ns crap4clj.complexity
   (:require [clojure.string :as str]))
 
@@ -284,3 +284,9 @@
                 :start-line start-line
                 :end-line end-line
                 :complexity (cyclomatic-complexity text)}))))
+
+(defn without-strings-and-comments
+  "Source with string contents and comments removed. Newlines are preserved
+  so line numbers still match the original file."
+  [source]
+  (-> source strip-strings strip-comments))

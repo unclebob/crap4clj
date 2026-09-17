@@ -1,11 +1,12 @@
-;; mutation-tested: 2026-03-04
+;; mutation-tested: 2026-09-17
 (ns crap4clj.core
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [crap4clj.cli :as cli]
             [crap4clj.complexity :as complexity]
             [crap4clj.coverage :as coverage]
-            [crap4clj.crap :as crap]))
+            [crap4clj.crap :as crap]
+            [crap4clj.doseq-double-count :as doseq-double-count]))
 
 (defn delete-coverage-dir [dir-path]
   (let [dir (io/file dir-path)]
@@ -59,13 +60,31 @@
           (coverage/source-to-coverage-paths
             source-path source source-root))))
 
-(defn- entries-from-source-html [coverage-path fns ns-name]
+(defn- apply-doseq-double-count
+  [source source-path line-cov]
+  (let [result (doseq-double-count/correct-line-cov source line-cov)]
+    {:line-cov (:line-cov result)
+     :correction {:path source-path
+                  :corrected-lines (:corrected-lines result)
+                  :form-count (:form-count result)}}))
+
+(defn- maybe-correct-line-cov
+  [source source-path line-cov options]
+  (if (:doseq-double-count? options)
+    (apply-doseq-double-count source source-path line-cov)
+    {:line-cov line-cov :correction nil}))
+
+(defn- entries-from-source-html [coverage-path fns ns-name source source-path options]
   (let [html (slurp coverage-path)
-        line-cov (coverage/parse-line-coverage html)]
-    (build-entries fns line-cov ns-name)))
+        parsed (coverage/parse-line-coverage html)
+        {:keys [line-cov correction]}
+        (maybe-correct-line-cov source source-path parsed options)]
+    {:entries (build-entries fns line-cov ns-name)
+     :correction correction}))
 
 (defn- entries-from-lcov [fns lcov-line-cov ns-name]
-  (build-entries fns lcov-line-cov ns-name))
+  {:entries (build-entries fns lcov-line-cov ns-name)
+   :correction nil})
 
 (defn- warn-unresolved-namespace-fallback [source-path ns-cov-path entries]
   (let [unresolved (count (filter #(nil? (:coverage %)) entries))]
@@ -74,12 +93,19 @@
         (println (format "Warning: namespace fallback coverage for %s via %s left %d/%d functions unresolved; showing N/A (not 0.0%%). Enable LCOV (--lcov) for file-accurate coverage."
                          source-path ns-cov-path unresolved (count entries)))))))
 
-(defn- entries-from-namespace-html [source-path ns-cov-path fns ns-name]
-  (let [html (slurp ns-cov-path)
-        detailed-line-cov (coverage/parse-detailed-line-coverage html)
-        entries (build-entries-by-name fns detailed-line-cov ns-name)]
-    (warn-unresolved-namespace-fallback source-path ns-cov-path entries)
-    entries))
+(defn- entries-from-namespace-html
+  [source-path ns-cov-path fns ns-name source options]
+  (let [html (slurp ns-cov-path)]
+    (if (:doseq-double-count? options)
+      (let [parsed (coverage/parse-line-coverage html)
+            {:keys [line-cov correction]}
+            (maybe-correct-line-cov source source-path parsed options)]
+        {:entries (build-entries fns line-cov ns-name)
+         :correction correction})
+      (let [detailed-line-cov (coverage/parse-detailed-line-coverage html)
+            entries (build-entries-by-name fns detailed-line-cov ns-name)]
+        (warn-unresolved-namespace-fallback source-path ns-cov-path entries)
+        {:entries entries :correction nil}))))
 
 (declare debug-lcov-mismatch)
 
@@ -87,13 +113,17 @@
   (when (and lcov-data (nil? lcov-line-cov))
     (debug-lcov-mismatch source-path lcov-data)))
 
+(defn- empty-analysis [fns ns-name]
+  {:entries (build-entries fns {} ns-name)
+   :correction nil})
+
 (defn- entries-for-source
-  [source-path source-root source fns ns-name lcov-line-cov]
+  [source-path source-root source fns ns-name lcov-line-cov options]
   (let [source-cov-path
         (coverage/source-to-coverage-path source-path source-root)]
     (cond
       (.exists (io/file source-cov-path))
-      (entries-from-source-html source-cov-path fns ns-name)
+      (entries-from-source-html source-cov-path fns ns-name source source-path options)
 
       lcov-line-cov
       (entries-from-lcov fns lcov-line-cov ns-name)
@@ -101,8 +131,8 @@
       :else
       (if-let [ns-cov-path
                (existing-namespace-cov-path source-path source source-root)]
-        (entries-from-namespace-html source-path ns-cov-path fns ns-name)
-        (build-entries fns {} ns-name)))))
+        (entries-from-namespace-html source-path ns-cov-path fns ns-name source options)
+        (empty-analysis fns ns-name)))))
 
 (defn- env-true? [s]
   (contains? #{"1" "true" "yes" "on"}
@@ -123,19 +153,27 @@
               (println (format "  score=%d sf=%s" score sf))))
           (println "LCOV debug: no close SF candidates."))))))
 
+(defn- analyze-source
+  [source-path lcov-data source-root options]
+  (let [source (slurp source-path)
+        fns (complexity/extract-functions source)
+        lcov-line-cov (coverage/lcov-coverage-for-source lcov-data source-path)
+        ns-name (source-namespace source source-path source-root)]
+    (maybe-debug-lcov-mismatch lcov-data lcov-line-cov source-path)
+    (entries-for-source
+      source-path source-root source fns ns-name lcov-line-cov options)))
+
 (defn analyze-file
   ([source-path]
    (analyze-file source-path nil nil))
   ([source-path lcov-data]
    (analyze-file source-path lcov-data nil))
   ([source-path lcov-data source-root]
-   (let [source (slurp source-path)
-         fns (complexity/extract-functions source)
-         lcov-line-cov (coverage/lcov-coverage-for-source lcov-data source-path)
-         ns-name (source-namespace source source-path source-root)]
-     (maybe-debug-lcov-mismatch lcov-data lcov-line-cov source-path)
-     (entries-for-source
-       source-path source-root source fns ns-name lcov-line-cov))))
+   (analyze-file source-path lcov-data source-root nil))
+  ([source-path lcov-data source-root options]
+   (let [{:keys [entries correction]}
+         (analyze-source source-path lcov-data source-root options)]
+     (with-meta (vec entries) {::correction correction}))))
 
 (defn source-files-in-root [source-root]
   (let [root (io/file source-root)]
@@ -177,17 +215,22 @@
 (defn- exit! [status]
   (System/exit status))
 
+(defn- source-root-map [options]
+  (into (sorted-map)
+        (for [root (:source-roots options)
+              source (source-files-in-root root)]
+          [source root])))
+
+(defn- analyze-all [options lcov-data]
+  (let [root-by-source (source-root-map options)
+        filtered (filter-sources (keys root-by-source) (:module-filters options))
+        chunks (mapv #(analyze-file % lcov-data (get root-by-source %) options)
+                     filtered)]
+    {:entries (crap/sort-by-crap (mapcat identity chunks))
+     :corrections (keep #(::correction (meta %)) chunks)}))
+
 (defn- sorted-entries [options lcov-data]
-  (let [root-by-source
-        (into (sorted-map)
-              (for [root (:source-roots options)
-                    source (source-files-in-root root)]
-                [source root]))
-        sources (keys root-by-source)
-        filtered (filter-sources sources (:module-filters options))
-        all-entries
-        (mapcat #(analyze-file % lcov-data (get root-by-source %)) filtered)]
-    (crap/sort-by-crap all-entries)))
+  (:entries (analyze-all options lcov-data)))
 
 (defn- prepare-coverage! [options]
   (when-not (:use-existing-coverage? options)
@@ -215,9 +258,12 @@
     :analyze (do
                (prepare-coverage! options)
                (let [lcov-data (coverage/load-lcov (:lcov-path options))
-                     sorted (sorted-entries options lcov-data)]
-                 (write-metrics-snapshot! sorted)
-                 (println (crap/format-report sorted))))))
+                     {:keys [entries corrections]} (analyze-all options lcov-data)]
+                 (when (:doseq-double-count? options)
+                   (println (doseq-double-count/format-summary corrections))
+                   (println))
+                 (write-metrics-snapshot! entries)
+                 (println (crap/format-report entries))))))
 
 (defn -main [& args]
   (run (cli/parse-args args)))

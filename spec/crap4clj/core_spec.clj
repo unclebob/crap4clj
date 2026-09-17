@@ -99,7 +99,7 @@
                           "scripts" ["scripts/task.bb"]
                           "src" ["src/app/core.clj"]))
                       crap4clj.core/analyze-file
-                      (fn [source _ root]
+                      (fn [source _ root & _]
                         (swap! calls conj [source root])
                         [])]
           (#'crap4clj.core/sorted-entries
@@ -306,10 +306,10 @@
         (with-redefs [crap4clj.core/delete-coverage-dir (fn [_] nil)
                       crap4clj.core/run-coverage-with-lcov (fn [_] 0)
                       crap4clj.coverage/load-lcov (fn [_] {:lcov true})
-                      crap4clj.core/sorted-entries
+                      crap4clj.core/analyze-all
                       (fn [options _]
                         (should= ["foo"] (:module-filters options))
-                        [{:name "foo"}])
+                        {:entries [{:name "foo"}] :corrections []})
                       crap4clj.crap/format-report (fn [_] "CRAP REPORT")]
           (binding [*out* out]
             (-main "foo")
@@ -347,10 +347,10 @@
                       crap4clj.coverage/load-lcov (fn [path]
                                                     (should= "custom/lcov.info" path)
                                                     {:lcov true})
-                      crap4clj.core/sorted-entries
+                      crap4clj.core/analyze-all
                       (fn [options _]
                         (should= ["custom/src"] (:source-roots options))
-                        [])
+                        {:entries [] :corrections []})
                       crap4clj.crap/format-report (fn [_] "CRAP REPORT")]
           (binding [*out* out]
             (run {:action :analyze
@@ -358,5 +358,31 @@
                   :lcov-path "custom/lcov.info"
                   :use-existing-coverage? true
                   :coverage-command nil
+                  :doseq-double-count? false
                   :module-filters []})
-            (should (str/includes? (str out) "CRAP REPORT")))))))
+            (should (str/includes? (str out) "CRAP REPORT")))))
+
+    (it "prints doseq double-count confirmation before the CRAP report"
+      (let [out (java.io.StringWriter.)]
+        (with-redefs [crap4clj.core/delete-coverage-dir (fn [_] nil)
+                      crap4clj.core/run-coverage-with-lcov (fn [_] 0)
+                      crap4clj.coverage/load-lcov (fn [_] nil)
+                      crap4clj.core/analyze-all
+                      (fn [_ _]
+                        {:entries []
+                         :corrections [{:path "src/foo.cljc"
+                                        :corrected-lines [4 5 6]
+                                        :form-count 1}]})
+                      crap4clj.crap/format-report (fn [_] "CRAP REPORT")
+                      crap4clj.core/write-metrics-snapshot! (fn [_])]
+          (binding [*out* out]
+            (run {:action :analyze
+                  :source-roots ["src"]
+                  :lcov-path "target/coverage/lcov.info"
+                  :use-existing-coverage? true
+                  :coverage-command nil
+                  :doseq-double-count? true
+                  :module-filters []})
+            (let [text (str out)]
+              (should (str/includes? text "src/foo.cljc: confirmed 3 lines in 1 doseq/for form"))
+              (should (str/includes? text "CRAP REPORT")))))))))

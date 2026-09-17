@@ -61,7 +61,14 @@
       (let [source "\n\n(defn alpha [] 1)\n\n"
             forms (#'crap4clj.complexity/extract-top-level-defn-forms source)]
         (should= 1 (count forms))
-        (should= "alpha" (:name (first forms))))))
+        (should= "alpha" (:name (first forms)))))
+
+    (it "strips strings and comments while keeping line breaks"
+      (let [source (str "(defn a [] \"(doseq [x xs] x)\")\n"
+                        "; (doseq [y ys] y)\n"
+                        "(defn b [] 1)\n")]
+        (should-not (re-find #"doseq" (without-strings-and-comments source)))
+        (should= 2 (count (re-seq #"\n" (without-strings-and-comments source)))))))
 
   (context "base complexity"
     (it "returns 1 for an empty function"

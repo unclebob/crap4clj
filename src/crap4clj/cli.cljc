@@ -1,3 +1,4 @@
+;; mutation-tested: 2026-09-17
 (ns crap4clj.cli
   (:require [clojure.string :as str]))
 
@@ -13,6 +14,16 @@
        "      --lcov <path>             LCOV file to read. Default: target/coverage/lcov.info.\n"
        "      --use-existing-coverage   Do not delete or regenerate target/coverage.\n"
        "      --coverage-command <cmd>  Coverage command to run instead of clj -M:cov --lcov.\n"
+       "      --doseq-double-count      Opt-in recount when a tested doseq/for body looks\n"
+       "                                half-covered. Cloverage instruments both copies of\n"
+       "                                the body (chunked and unchunked), so a fully run\n"
+       "                                line can show as 50% forms (e.g. 15/30). That is a\n"
+       "                                rewriter bug, not missing tests. Run a normal crap\n"
+       "                                report first; if HTML titles on those body lines\n"
+       "                                are N out of 2N, re-run with this flag to confirm\n"
+       "                                the fingerprint and treat the live copy as covered.\n"
+       "                                Leave off unless you suspect this. Needs Cloverage\n"
+       "                                HTML form counts; ignored for LCOV-only runs.\n"
        "\n"
        "Arguments:\n"
        "  module-filter    Optional source path fragment. When present, only matching\n"
@@ -45,6 +56,7 @@
                   :lcov-path "target/coverage/lcov.info"
                   :use-existing-coverage? false
                   :coverage-command nil
+                  :doseq-double-count? false
                   :module-filters []}]
     (if-let [arg (first args)]
       (case arg
@@ -63,6 +75,10 @@
         "--use-existing-coverage"
         (recur (rest args)
                (assoc options :use-existing-coverage? true))
+
+        "--doseq-double-count"
+        (recur (rest args)
+               (assoc options :doseq-double-count? true))
 
         (if (option-like? arg)
           (throw (ex-info (str "Unknown option: " arg) {:option arg}))
