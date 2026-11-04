@@ -175,7 +175,9 @@
         cond-decisions (count-cond-decisions clean)]
     (+ 1 simple cond-decisions)))
 
-(def ^:private defn-pattern #"(?s)^\(\s*defn-?\s+([^\s\(\)\[\]\{\}\"]+)")
+;; Also matches defn macros from other libraries: s/defn, mx/defn, >defn.
+(def ^:private defn-pattern
+  #"(?s)^\(\s*(?:[^\s\(\)\[\]\{\}\"/]+/)?>?defn-?\s+([^\s\(\)\[\]\{\}\"]+)")
 
 (defn- extract-top-level-defn-forms [source]
   (let [n (count source)]

@@ -34,7 +34,16 @@
             detailed (parse-detailed-line-coverage html)]
         (should= 100.0 (coverage-for-function-name detailed "foo"))
         (should= 0.0 (coverage-for-function-name detailed "bar"))
-        (should= nil (coverage-for-function-name detailed "baz")))))
+        (should= nil (coverage-for-function-name detailed "baz"))))
+
+    (it "finds coverage for defn macros under a namespace alias or >defn"
+      (let [html (str "<span class=\"covered\" title=\"1 out of 1 forms covered\">1&nbsp;&nbsp;(s/defn&nbsp;foo&nbsp;:-&nbsp;s/Int</span><br/>"
+                      "<span class=\"covered\" title=\"1 out of 1 forms covered\">2&nbsp;&nbsp;&nbsp;&nbsp;1)</span><br/>"
+                      "<span class=\"not-covered\" title=\"0 out of 1 forms covered\">3&nbsp;&nbsp;(&gt;defn&nbsp;bar&nbsp;[]</span><br/>"
+                      "<span class=\"not-covered\" title=\"0 out of 1 forms covered\">4&nbsp;&nbsp;&nbsp;&nbsp;0)</span><br/>")
+            detailed (parse-detailed-line-coverage html)]
+        (should= 100.0 (coverage-for-function-name detailed "foo"))
+        (should= 0.0 (coverage-for-function-name detailed "bar")))))
 
   (context "lcov parsing"
     (it "parses line coverage from lcov text"
