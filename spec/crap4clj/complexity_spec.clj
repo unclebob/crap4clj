@@ -265,6 +265,35 @@
         (should= 1 (count fns))
         (should= "helper" (:name (first fns)))))
 
+    (it "handles defn macros under a namespace alias"
+      (let [source (str "(s/defn annotated :- s/Int\n  [x :- s/Int]\n  x)\n\n"
+                        "(mx/defn malli-fn [x]\n  x)\n\n"
+                        "(schema.core/defn- qualified-private [x]\n  x)")
+            fns (extract-functions source)]
+        (should= ["annotated" "malli-fn" "qualified-private"] (map :name fns))
+        (should= [1 5 8] (map :start-line fns))))
+
+    (it "handles Guardrails >defn and >defn-"
+      (let [source "(>defn checked [x]\n  [int? => int?]\n  x)\n\n(>defn- checked-private [] 1)"
+            fns (extract-functions source)]
+        (should= ["checked" "checked-private"] (map :name fns))))
+
+    (it "gives annotated s/defn the same CC as the plain defn"
+      (let [plain (extract-functions "(defn f [x]\n  (if x 1 0))")
+            annotated (extract-functions "(s/defn f :- s/Int\n  [x :- (s/maybe s/Int)]\n  (if x 1 0))")]
+        (should= (map :complexity plain) (map :complexity annotated))))
+
+    (it "ignores forms whose operator only contains defn"
+      (let [source "(defnk a [] 1)\n(undefn b)\n(p/defnk c [] 1)\n(s/undefn d [] 1)"]
+        (should= [] (extract-functions source))))
+
+    (it "skips metadata before the function name"
+      (let [source (str "(defn ^:private a [] 1)\n"
+                        "(s/defn ^:always-validate b :- s/Int [] 1)\n"
+                        "(defn ^:private ^String c [] \"x\")\n"
+                        "(defn ^{:doc \"d\" :added \"1.0\"} d [] 1)")]
+        (should= ["a" "b" "c" "d"] (map :name (extract-functions source)))))
+
     (it "computes CC for each extracted function"
       (let [source "(defn simple [x] x)\n\n(defn branchy [x]\n  (if x\n    (when x 1)\n    0))"
             fns (extract-functions source)]

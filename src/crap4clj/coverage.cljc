@@ -11,7 +11,7 @@
   #"(?s)<span class=\"([^\"]+)\" title=\"(\d+) out of (\d+) forms covered\">\s*(\d+)&nbsp;&nbsp;(.*?)\s*</span><br/>")
 
 (def ^:private defn-line-pattern
-  #"\(defn-?&nbsp;([^\s&\(\)\[\]\{\}\"]+)")
+  #"\((?:[^\s&\(\)\[\]\{\}\"/]+/)?(?:&gt;)?defn-?&nbsp;(?:\^(?:\{[^\{\}]*\}|[^\s&\(\)\[\]\{\}\"]+)&nbsp;)*([^\s&\(\)\[\]\{\}\"]+)")
 
 (def ^:private lcov-da-pattern #"DA:(\d+),(\d+)")
 
@@ -26,11 +26,22 @@
             :when (pos? t)]
         [(Integer/parseInt line-str) {:covered c :total t}]))))
 
+(defn- executed-only
+  "Defn macros such as s/defn attribute their generated validation code,
+  error paths included, to the header line, so tests can never cover its forms."
+  [{:keys [covered total] :as entry}]
+  (if (pos? total)
+    (assoc entry :covered (if (pos? covered) 1 0) :total 1)
+    entry))
+
 (defn coverage-for-range [line-cov start-line end-line]
-  (let [entries (for [ln (range start-line (inc end-line))
+  (let [multi-line? (< start-line end-line)
+        entries (for [ln (range start-line (inc end-line))
                       :let [entry (get line-cov ln)]
                       :when entry]
-                  entry)
+                  (if (and multi-line? (= ln start-line))
+                    (executed-only entry)
+                    entry))
         total-covered (reduce + 0 (map :covered entries))
         total-forms (reduce + 0 (map :total entries))]
     (if (zero? total-forms)
@@ -66,7 +77,10 @@
                               defs)
                         (dec (count detailed-line-cov)))
             entries (subvec detailed-line-cov start-idx (inc end-idx))]
-        (coverage-for-entries entries)))))
+        (coverage-for-entries
+          (if (> (count entries) 1)
+            (update entries 0 executed-only)
+            entries))))))
 
 (defn- finalize-lcov-record [state]
   (if-let [f (:current-file state)]
