@@ -287,6 +287,13 @@
       (let [source "(defnk a [] 1)\n(undefn b)\n(p/defnk c [] 1)\n(s/undefn d [] 1)"]
         (should= [] (extract-functions source))))
 
+    (it "skips metadata before the function name"
+      (let [source (str "(defn ^:private a [] 1)\n"
+                        "(s/defn ^:always-validate b :- s/Int [] 1)\n"
+                        "(defn ^:private ^String c [] \"x\")\n"
+                        "(defn ^{:doc \"d\" :added \"1.0\"} d [] 1)")]
+        (should= ["a" "b" "c" "d"] (map :name (extract-functions source)))))
+
     (it "computes CC for each extracted function"
       (let [source "(defn simple [x] x)\n\n(defn branchy [x]\n  (if x\n    (when x 1)\n    0))"
             fns (extract-functions source)]

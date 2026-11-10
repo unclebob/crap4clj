@@ -175,9 +175,10 @@
         cond-decisions (count-cond-decisions clean)]
     (+ 1 simple cond-decisions)))
 
-;; Also matches defn macros from other libraries: s/defn, mx/defn, >defn.
+;; Also matches defn macros from other libraries (s/defn, mx/defn, >defn)
+;; and skips metadata before the name (^:private, ^{:doc "x"}).
 (def ^:private defn-pattern
-  #"(?s)^\(\s*(?:[^\s\(\)\[\]\{\}\"/]+/)?>?defn-?\s+([^\s\(\)\[\]\{\}\"]+)")
+  #"(?s)^\(\s*(?:[^\s\(\)\[\]\{\}\"/]+/)?>?defn-?\s+(?:\^(?:\{[^\{\}]*\}|[^\s\(\)\[\]\{\}\"]+)\s+)*([^\s\(\)\[\]\{\}\"]+)")
 
 (defn- extract-top-level-defn-forms [source]
   (let [n (count source)]

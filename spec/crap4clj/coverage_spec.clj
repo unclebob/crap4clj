@@ -43,6 +43,15 @@
                       "<span class=\"not-covered\" title=\"0 out of 1 forms covered\">4&nbsp;&nbsp;&nbsp;&nbsp;0)</span><br/>")
             detailed (parse-detailed-line-coverage html)]
         (should= 100.0 (coverage-for-function-name detailed "foo"))
+        (should= 0.0 (coverage-for-function-name detailed "bar"))))
+
+    (it "finds coverage for a function with metadata before its name"
+      (let [html (str "<span class=\"covered\" title=\"1 out of 1 forms covered\">1&nbsp;&nbsp;(s/defn&nbsp;^:private&nbsp;foo&nbsp;:-&nbsp;s/Int</span><br/>"
+                      "<span class=\"covered\" title=\"1 out of 1 forms covered\">2&nbsp;&nbsp;&nbsp;&nbsp;1)</span><br/>"
+                      "<span class=\"not-covered\" title=\"0 out of 1 forms covered\">3&nbsp;&nbsp;(defn&nbsp;^{:doc&nbsp;&quot;b&quot;}&nbsp;bar&nbsp;[]</span><br/>"
+                      "<span class=\"not-covered\" title=\"0 out of 1 forms covered\">4&nbsp;&nbsp;&nbsp;&nbsp;0)</span><br/>")
+            detailed (parse-detailed-line-coverage html)]
+        (should= 100.0 (coverage-for-function-name detailed "foo"))
         (should= 0.0 (coverage-for-function-name detailed "bar")))))
 
   (context "lcov parsing"

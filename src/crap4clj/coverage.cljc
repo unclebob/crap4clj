@@ -11,7 +11,7 @@
   #"(?s)<span class=\"([^\"]+)\" title=\"(\d+) out of (\d+) forms covered\">\s*(\d+)&nbsp;&nbsp;(.*?)\s*</span><br/>")
 
 (def ^:private defn-line-pattern
-  #"\((?:[^\s&\(\)\[\]\{\}\"/]+/)?(?:&gt;)?defn-?&nbsp;([^\s&\(\)\[\]\{\}\"]+)")
+  #"\((?:[^\s&\(\)\[\]\{\}\"/]+/)?(?:&gt;)?defn-?&nbsp;(?:\^(?:\{[^\{\}]*\}|[^\s&\(\)\[\]\{\}\"]+)&nbsp;)*([^\s&\(\)\[\]\{\}\"]+)")
 
 (def ^:private lcov-da-pattern #"DA:(\d+),(\d+)")
 
