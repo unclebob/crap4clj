@@ -52,7 +52,13 @@
                       "<span class=\"not-covered\" title=\"0 out of 1 forms covered\">4&nbsp;&nbsp;&nbsp;&nbsp;0)</span><br/>")
             detailed (parse-detailed-line-coverage html)]
         (should= 100.0 (coverage-for-function-name detailed "foo"))
-        (should= 0.0 (coverage-for-function-name detailed "bar")))))
+        (should= 0.0 (coverage-for-function-name detailed "bar"))))
+
+    (it "counts the header line of a multi-line function only as executed or not"
+      (let [html (str "<span class=\"partial\" title=\"65 out of 125 forms covered\">1&nbsp;&nbsp;(s/defn&nbsp;foo&nbsp;:-&nbsp;s/Int</span><br/>"
+                      "<span class=\"covered\" title=\"13 out of 13 forms covered\">2&nbsp;&nbsp;&nbsp;&nbsp;(bar&nbsp;x))</span><br/>")
+            detailed (parse-detailed-line-coverage html)]
+        (should= 100.0 (coverage-for-function-name detailed "foo")))))
 
   (context "lcov parsing"
     (it "parses line coverage from lcov text"
@@ -130,7 +136,19 @@
         (should= 50.0 (coverage-for-range line-cov 3 5))))
 
     (it "returns 0.0 when no instrumented lines in range"
-      (should= 0.0 (coverage-for-range {} 1 5))))
+      (should= 0.0 (coverage-for-range {} 1 5)))
+
+    (it "counts the header line of a multi-line function only as executed or not"
+      (should= 100.0 (coverage-for-range {8 {:covered 65 :total 125}
+                                          18 {:covered 13 :total 13}} 8 18))
+      (should= 0.0 (coverage-for-range {8 {:covered 0 :total 125}
+                                        18 {:covered 0 :total 13}} 8 18)))
+
+    (it "keeps form coverage for a one-line function"
+      (should= 60.0 (coverage-for-range {3 {:covered 3 :total 5}} 3 3)))
+
+    (it "leaves the body alone when the header line has no instrumented forms"
+      (should= 50.0 (coverage-for-range {4 {:covered 1 :total 2}} 3 4))))
 
   (context "source-to-coverage-path"
     (it "maps source path to coverage HTML path"
